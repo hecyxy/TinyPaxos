@@ -1,5 +1,12 @@
-package hcyxy.tech.PaxosClient
+package hcyxy.tech.client
 
+import hcyxy.tech.entity.EventType
+import hcyxy.tech.entity.Packet
+import hcyxy.tech.entity.Proposal
+import hcyxy.tech.entity.RemotingMsg
+import hcyxy.tech.server.MsgDecoder
+import hcyxy.tech.server.MsgEncoder
+import hcyxy.tech.util.RemotingMsgSerializable
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.Channel
 import io.netty.channel.ChannelFuture
@@ -22,7 +29,7 @@ class PaxosClient {
         val workerGroup = NioEventLoopGroup(1, object : ThreadFactory {
             val index = AtomicInteger(0)
             override fun newThread(r: Runnable): Thread {
-                return Thread(r, "Client-Thread${index.incrementAndGet()}")
+                return Thread(r, "client-Thread${index.incrementAndGet()}")
             }
         })
 
@@ -32,17 +39,30 @@ class PaxosClient {
             .option(ChannelOption.SO_KEEPALIVE, false)
             .handler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
-                    ch.pipeline().addLast()
+                    ch.pipeline().addLast(MsgEncoder())
+                        .addLast(MsgDecoder())
+                        .addLast(ClientManager())
+                        .addLast(ClientHandler())
                 }
             })
     }
 
     fun connect(ip: String, port: Int): Channel {
-        future = boot.connect(ip, port)
-        if (future.isSuccess) {
+        try {
+            future = boot.connect(ip, port)
             return future.channel()
-        } else {
-            throw Exception("连接出错")
+        } catch (e: Exception) {
+            logger.error("error $e")
+            throw  e
         }
     }
+}
+
+fun main(vararg args: String) {
+    val channel = PaxosClient().connect("127.0.0.1", 11112)
+    val proposal = Proposal(EventType.ACCEPTOR, 1, null)
+    val temp = RemotingMsgSerializable.encode(proposal)
+    val remoting = RemotingMsg()
+    remoting.setBody(temp)
+    channel.writeAndFlush(remoting)
 }

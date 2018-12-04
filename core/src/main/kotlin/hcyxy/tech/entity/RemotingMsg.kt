@@ -5,29 +5,33 @@ import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 
 class RemotingMsg {
-    private val logger = LoggerFactory.getLogger(RemotingMsg::class.java)
-    @Transient
+    private val logger = LoggerFactory.getLogger(javaClass)
     private var body: ByteArray? = null
 
     fun encode(): ByteBuffer {
-        val buffer = ByteBuffer.allocate(4)
+        val size = body?.size ?: 0
+        val len = 4 + size
+        val buffer = ByteBuffer.allocate(4 + len)
+        System.out.printf("len %s  body %s ", len, size)
+        buffer.putInt(len)
+        buffer.putInt(size)
+        buffer.put(body)
+        buffer.flip()
         return buffer
     }
 
-    fun decode(buffer: ByteBuffer): RemotingMsg {
+    fun decode(buffer: ByteBuffer): Proposal {
+        println("limit :" + buffer.limit())
         val length = buffer.int
-        val headerLength = buffer.int
-        logger.info("msg length $length headerLength $headerLength")
-        val headerData = ByteArray(headerLength)
-        buffer.get(headerData)
-        val bodyLength = length - 4 - headerLength
-        var bodyData: ByteArray? = null
-        if (bodyLength > 0) {
-            bodyData = ByteArray(bodyLength)
-            buffer.get(bodyData)
-        }
-        val msg = RemotingMsgSerializable.decode(headerData, RemotingMsg::class.java)
-        msg.body = bodyData
-        return msg
+        println("total length:$length")
+        val bodyLength = buffer.int
+        println("header length:$bodyLength")
+        val body = ByteArray(bodyLength)
+        buffer.get(body)
+        return RemotingMsgSerializable.decode(body, Proposal::class.java)
+    }
+
+    fun setBody(body: ByteArray) {
+        this.body = body
     }
 }

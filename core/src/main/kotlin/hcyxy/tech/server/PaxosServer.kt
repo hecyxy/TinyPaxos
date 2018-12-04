@@ -1,4 +1,4 @@
-package hcyxy.tech.PaxosServer
+package hcyxy.tech.server
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelFuture
@@ -11,7 +11,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 
-class PaxosServer {
+class PaxosServer(port: Int) {
     private val server = ServerBootstrap()
     private val bossGroup = NioEventLoopGroup(1, object : ThreadFactory {
         private val threadIndex = AtomicInteger(0)
@@ -33,15 +33,18 @@ class PaxosServer {
             .option(ChannelOption.SO_REUSEADDR, true)
             .option(ChannelOption.SO_KEEPALIVE, true)
             .option(ChannelOption.TCP_NODELAY, true)
-            .localAddress(InetSocketAddress(1111))
+            .localAddress(InetSocketAddress(port))
             .childHandler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
-                    //TODO 各种控制器
+                    ch.pipeline().addLast(MsgEncoder())
+                        .addLast(MsgDecoder())
+                        .addLast(ConnectManager())
+                        .addLast(ServerHandler())
                 }
             })
     }
 
-    fun start(ip: String, port: Int) {
+    fun start() {
         val future: ChannelFuture
         try {
             future = server.bind().sync()
@@ -49,7 +52,11 @@ class PaxosServer {
         } catch (e: Exception) {
             bossGroup.shutdownGracefully()
             workGroup.shutdownGracefully()
+            throw e
         }
     }
+}
 
+fun main(vararg args: String) {
+    PaxosServer(11112).start()
 }

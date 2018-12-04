@@ -13,7 +13,7 @@ object RemotingMsgSerializable {
     private val cachedSchema = ConcurrentHashMap<Class<*>, Schema<*>>()
 
     fun <T> getSchema(cls: Class<T>): Schema<T>? {
-        var schema: Schema<T>? = cachedSchema[cls] as Schema<T>
+        var schema: Schema<T>? = cachedSchema[cls] as Schema<T>?
         if (schema == null) {
             schema = RuntimeSchema.createFrom(cls)
             if (schema != null) {
@@ -24,7 +24,7 @@ object RemotingMsgSerializable {
     }
 
     fun <T : Any> encode(obj: T): ByteArray {
-        val cls = obj.javaClass as Class<T>
+        val cls = obj.javaClass
         val buffer = LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE)
         try {
             val schema = getSchema(cls)

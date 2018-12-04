@@ -1,6 +1,8 @@
-package hcyxy.tech.PaxosServer
+package hcyxy.tech.server
 
+import hcyxy.tech.entity.Proposal
 import hcyxy.tech.entity.RemotingMsg
+import hcyxy.tech.util.RemotingMsgSerializable
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder

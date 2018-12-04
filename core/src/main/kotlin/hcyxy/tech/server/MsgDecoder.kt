@@ -1,4 +1,4 @@
-package hcyxy.tech.PaxosServer
+package hcyxy.tech.server
 
 import hcyxy.tech.entity.RemotingMsg
 import io.netty.buffer.ByteBuf
@@ -16,8 +16,6 @@ class MsgDecoder : LengthFieldBasedFrameDecoder(FRAME_MAX_LENGTH, 0, 4, 0, 0) {
         var frame: ByteBuf? = null
         try {
             frame = super.decode(ctx, `in`) as ByteBuf
-            if (null == frame)
-                return null
             val byteBuffer = frame.nioBuffer()
             return RemotingMsg().decode(byteBuffer)
         } catch (e: Exception) {
