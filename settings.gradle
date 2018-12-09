@@ -1,2 +1,3 @@
 rootProject.name = 'TinyPaxos'
+include('remoting')
 include('core')
