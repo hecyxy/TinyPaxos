@@ -1,6 +1,6 @@
-package hcyxy.tech.client
+package hcyxy.tech.remoting.client
 
-import hcyxy.tech.entity.Proposal
+import hcyxy.tech.remoting.entity.Proposal
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import org.slf4j.LoggerFactory

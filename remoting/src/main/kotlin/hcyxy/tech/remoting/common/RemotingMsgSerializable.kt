@@ -1,4 +1,4 @@
-package hcyxy.tech.util
+package hcyxy.tech.remoting.common
 
 import com.dyuproject.protostuff.LinkedBuffer
 import com.dyuproject.protostuff.ProtostuffIOUtil
@@ -12,7 +12,7 @@ object RemotingMsgSerializable {
     private val objenesis = ObjenesisStd(true)
     private val cachedSchema = ConcurrentHashMap<Class<*>, Schema<*>>()
 
-    fun <T> getSchema(cls: Class<T>): Schema<T>? {
+    private fun <T> getSchema(cls: Class<T>): Schema<T>? {
         var schema: Schema<T>? = cachedSchema[cls] as Schema<T>?
         if (schema == null) {
             schema = RuntimeSchema.createFrom(cls)

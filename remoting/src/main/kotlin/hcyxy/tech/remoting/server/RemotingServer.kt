@@ -1,6 +1,6 @@
-package hcyxy.tech.server
+package hcyxy.tech.remoting.server
 
-import hcyxy.tech.RemotingService
+import hcyxy.tech.remoting.RemotingService
 import io.netty.channel.Channel
 
 interface RemotingServer : RemotingService {

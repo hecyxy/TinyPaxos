@@ -1,13 +1,10 @@
-package hcyxy.tech.client
+package hcyxy.tech.remoting.client
 
-import hcyxy.tech.RemotingAbstract
-import hcyxy.tech.server.MsgDecoder
-import hcyxy.tech.server.MsgEncoder
+import hcyxy.tech.remoting.RemotingAbstract
+import hcyxy.tech.remoting.server.MsgDecoder
+import hcyxy.tech.remoting.server.MsgEncoder
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -17,30 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class RemotingClientImpl : RemotingAbstract(), RemotingClient {
     private val logger = LoggerFactory.getLogger(javaClass)
+    private val boot = Bootstrap()
+    private var workerGroup: EventLoopGroup? = null
     private lateinit var future: ChannelFuture
-    private var boot: Bootstrap
 
     init {
-        val workerGroup = NioEventLoopGroup(1, object : ThreadFactory {
-            val index = AtomicInteger(0)
-            override fun newThread(r: Runnable): Thread {
-                return Thread(r, "client-Thread${index.incrementAndGet()}")
-            }
-        })
 
-        boot = Bootstrap()
-        boot.group(workerGroup).channel(NioSocketChannel::class.java)
-            .option(ChannelOption.TCP_NODELAY, true)
-            .option(ChannelOption.SO_KEEPALIVE, false)
-            .handler(object : ChannelInitializer<SocketChannel>() {
-                override fun initChannel(ch: SocketChannel) {
-                    ch.pipeline().addLast(MsgEncoder())
-                        .addLast(MsgDecoder())
-                        .addLast(ClientManager())
-                        .addLast(ClientHandler())
-                }
-            })
     }
+
 
     fun connect(ip: String, port: Int): Channel {
         try {
@@ -53,7 +34,24 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
     }
 
     override fun start() {
-        //TODO
+        this.workerGroup = NioEventLoopGroup(1, object : ThreadFactory {
+            val index = AtomicInteger(0)
+            override fun newThread(r: Runnable): Thread {
+                return Thread(r, "client-Thread${index.incrementAndGet()}")
+            }
+        })
+        this.boot.group(workerGroup).channel(NioSocketChannel::class.java)
+            .option(ChannelOption.TCP_NODELAY, true)
+            .option(ChannelOption.SO_KEEPALIVE, false)
+            .handler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(ch: SocketChannel) {
+                    ch.pipeline()
+                        .addLast(MsgEncoder())
+                        .addLast(MsgDecoder())
+                        .addLast(ClientManager())
+                        .addLast(ClientHandler())
+                }
+            })
     }
 
     override fun shutdown() {

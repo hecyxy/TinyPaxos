@@ -1,7 +1,7 @@
-package hcyxy.tech.server
+package hcyxy.tech.remoting.server
 
-import hcyxy.tech.entity.EventType
-import hcyxy.tech.entity.Proposal
+import hcyxy.tech.remoting.entity.EventType
+import hcyxy.tech.remoting.entity.Proposal
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler

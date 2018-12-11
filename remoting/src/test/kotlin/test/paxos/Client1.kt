@@ -1,10 +1,10 @@
 package test.paxos
 
 import hcyxy.tech.client.PaxosClient
-import hcyxy.tech.entity.EventType
-import hcyxy.tech.entity.Proposal
-import hcyxy.tech.entity.RemotingMsg
-import hcyxy.tech.util.RemotingMsgSerializable
+import hcyxy.tech.remoting.entity.EventType
+import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.entity.RemotingMsg
+import hcyxy.tech.remoting.common.RemotingMsgSerializable
 
 fun main(vararg args: String) {
     val channel = PaxosClient().connect("localhost", 11111)

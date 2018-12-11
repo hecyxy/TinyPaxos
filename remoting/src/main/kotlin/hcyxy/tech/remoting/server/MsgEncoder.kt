@@ -1,8 +1,6 @@
-package hcyxy.tech.server
+package hcyxy.tech.remoting.server
 
-import hcyxy.tech.entity.Proposal
-import hcyxy.tech.entity.RemotingMsg
-import hcyxy.tech.util.RemotingMsgSerializable
+import hcyxy.tech.remoting.entity.RemotingMsg
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToByteEncoder

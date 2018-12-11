@@ -1,6 +1,6 @@
-package hcyxy.tech.entity
+package hcyxy.tech.remoting.entity
 
-import hcyxy.tech.util.RemotingMsgSerializable
+import hcyxy.tech.remoting.common.RemotingMsgSerializable
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 

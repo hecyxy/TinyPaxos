@@ -1,7 +1,7 @@
-package hcyxy.tech
+package hcyxy.tech.remoting
 
 /**
- * @Description server和client的公共抽象类
+ * @Description server和client的公共抽象方法
  */
 abstract class RemotingAbstract {
 

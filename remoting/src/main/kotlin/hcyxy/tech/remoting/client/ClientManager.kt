@@ -1,4 +1,4 @@
-package hcyxy.tech.client
+package hcyxy.tech.remoting.client
 
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandlerContext
