@@ -1,18 +1,14 @@
 package test.paxos
 
-import hcyxy.tech.client.PaxosClient
-import hcyxy.tech.remoting.entity.EventType
-import hcyxy.tech.remoting.entity.Proposal
-import hcyxy.tech.remoting.entity.RemotingMsg
-import hcyxy.tech.remoting.common.RemotingMsgSerializable
+abstract class Base {
+    var code = calculate()
+    abstract fun calculate(): Int
+}
 
-fun main(vararg args: String) {
-    val channel = PaxosClient().connect("localhost", 11111)
-    val proposal = Proposal(EventType.PROPOSER, 1, null)
-    val temp = RemotingMsgSerializable.encode(proposal)
-    val remoting = RemotingMsg()
-    remoting.setBody(temp)
-    channel.writeAndFlush(remoting)
-    Thread.sleep(2000)
-    channel.writeAndFlush(remoting)
+class Derived(private val x: Int) : Base() {
+    override fun calculate() = x
+}
+
+fun main(args: Array<String>) {
+    println(Derived(42).code) // Expected: 42, actual: 0
 }
