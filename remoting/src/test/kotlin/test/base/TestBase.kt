@@ -1,6 +1,9 @@
 package test.base
 
 import hcyxy.tech.remoting.common.BaseThread
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import javax.xml.bind.JAXBElement
 import kotlin.concurrent.thread
 
 class RunThread : BaseThread() {

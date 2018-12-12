@@ -4,7 +4,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-
 /**
  * @Description 线程抽象类
  */
@@ -33,10 +32,9 @@ abstract class BaseThread : Runnable {
         this.shutdown(false)
     }
 
-    fun shutdown(interrupt: Boolean) {
+    private fun shutdown(interrupt: Boolean) {
         this.stopped = true
         logger.info("shutdown thread ${this.getServiceName()}  interrupt $interrupt")
-
         if (hasNotified.compareAndSet(false, true)) {
             wait.countDown()
         }
@@ -60,37 +58,24 @@ abstract class BaseThread : Runnable {
         return joinTime
     }
 
+
     fun stop() {
-        this.stop(false)
-    }
-
-    fun stop(interrupt: Boolean) {
         this.stopped = true
-        logger.info("stop thread ${this.getServiceName()} interrupt  $interrupt")
-
+        logger.info("stop thread ${this.getServiceName()}")
         if (hasNotified.compareAndSet(false, true)) {
             wait.countDown()
         }
-
-        if (interrupt) {
-            this.thread.interrupt()
-        }
-    }
-
-    fun makeStop() {
-        this.stopped = true
-        logger.info("makestop thread ${this.getServiceName()}")
     }
 
     fun wakeup() {
         if (hasNotified.compareAndSet(false, true)) {
-            wait.countDown() // notify
+            wait.countDown()
         }
     }
 
     protected fun waitForRunning(interval: Long) {
         if (hasNotified.compareAndSet(true, false)) {
-            this.onWaitEnd()
+            this.waitToEnd()
             return
         }
         wait.reset()
@@ -100,11 +85,11 @@ abstract class BaseThread : Runnable {
             logger.error("Interrupted", e)
         } finally {
             hasNotified.set(false)
-            this.onWaitEnd()
+            this.waitToEnd()
         }
     }
 
-    private fun onWaitEnd() {}
+    private fun waitToEnd() {}
 
     fun isStopped(): Boolean {
         return stopped
