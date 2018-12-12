@@ -2,6 +2,7 @@ package hcyxy.tech.remoting.client
 
 import hcyxy.tech.remoting.RemotingAbstract
 import hcyxy.tech.remoting.common.ChannelWrapper
+import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.server.MsgDecoder
 import hcyxy.tech.remoting.server.MsgEncoder
 import io.netty.bootstrap.Bootstrap
@@ -27,7 +28,8 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
     private var workerGroup: EventLoopGroup? = null
     private val channelTable = ConcurrentHashMap<String, ChannelWrapper>()
     private val lock = ReentrantLock()
-    private val lockTime = 5L
+    private val lockTime = 5000L
+    private val channelWait = 2000L
 
     init {
         this.workerGroup = NioEventLoopGroup(1, object : ThreadFactory {
@@ -80,26 +82,76 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
     }
 
     private fun createChannel(addr: String): Channel? {
-        val channelWrapper = this.channelTable[addr]
+        var channelWrapper = this.channelTable[addr]
         if (channelWrapper != null && channelWrapper.isOK()) {
             return channelWrapper.getChannel()
         }
-
         if (lock.tryLock(lockTime, TimeUnit.SECONDS)) {
-
+            try {
+                var createdConn = false
+                channelWrapper = this.channelTable[addr]
+                if (channelWrapper != null) {
+                    if (channelWrapper.isOK()) {
+                        return channelWrapper.getChannel()
+                    } else if (!channelWrapper.getChannelFuture().isDone) {
+                        createdConn = false //正在连接中
+                    } else {
+                        this.channelTable.remove(addr)
+                        createdConn = true
+                    }
+                } else {
+                    createdConn = true
+                }
+                if (createdConn) {
+                    val channelFuture = this.boot.connect(RemotingHelper.string2Addr(addr))
+                    channelWrapper = ChannelWrapper(channelFuture)
+                    this.channelTable[addr] = channelWrapper
+                }
+            } catch (e: Exception) {
+                logger.error("create channel error ", e)
+            } finally {
+                lock.unlock()
+            }
         } else {
-
+            logger.warn("lock timeout,create channel failed")
+        }
+        if (channelWrapper != null) {
+            val channelFuture = channelWrapper.getChannelFuture()
+            if (channelFuture.awaitUninterruptibly(channelWait, TimeUnit.MILLISECONDS)) {
+                if (channelWrapper.isOK()) {
+                    logger.info("createChannel: connect remote host[{}] success, {}", addr, channelFuture.toString())
+                    return channelWrapper.getChannel()
+                } else {
+                    logger.warn(
+                        "createChannel: connect remote host[{}] failed,{} cause:",
+                        addr,
+                        channelFuture.toString(),
+                        channelFuture.cause()
+                    )
+                }
+            } else {
+                logger.warn(
+                    "createChannel: connect remote host[{}] timeout {}ms, {}",
+                    addr,
+                    channelWait,
+                    channelFuture.toString()
+                )
+            }
         }
         return null
     }
-}
 
-//fun main(vararg args: String) {
-//    val channel = PaxosClient().connect("127.0.0.1", 11112)
-//    val proposal = Proposal(EventType.ACCEPTOR, 1, null)
-//    val temp = RemotingMsgSerializable.encode(proposal)
-//    val remoting = RemotingMsg()
-//    remoting.setBody(temp)
-//    channel.writeAndFlush(remoting)
-//}
+    fun closeChannel(addr: String, channel: Channel) {
+        try {
+            if (lock.tryLock(lockTime, TimeUnit.MILLISECONDS)) {
+                var removedChannel = true
+
+            }
+        } catch (e: Exception) {
+
+        } finally {
+            lock.unlock()
+        }
+    }
+}
 

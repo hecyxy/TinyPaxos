@@ -1,9 +1,8 @@
 package test.base
 
 import hcyxy.tech.remoting.common.BaseThread
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import javax.xml.bind.JAXBElement
+import hcyxy.tech.remoting.common.RemotingHelper
+import java.net.InetSocketAddress
 import kotlin.concurrent.thread
 
 class RunThread : BaseThread() {
@@ -25,9 +24,7 @@ class RunThread : BaseThread() {
 }
 
 fun main(vararg args: String) {
-    val a: BaseThread = RunThread()
-    a.start()
-    val b: BaseThread = RunThread()
-    b.start()
-    a.shutdown()
+    val addr = "100.73.80.21:8090"
+    val socket = InetSocketAddress("100.73.41.30",8090)
+    println(socket.toString())
 }
