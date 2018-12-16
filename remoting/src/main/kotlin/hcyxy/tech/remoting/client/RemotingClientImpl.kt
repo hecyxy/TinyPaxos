@@ -1,8 +1,11 @@
 package hcyxy.tech.remoting.client
 
+import hcyxy.tech.remoting.InvokeCallback
 import hcyxy.tech.remoting.RemotingAbstract
 import hcyxy.tech.remoting.common.ChannelWrapper
 import hcyxy.tech.remoting.common.RemotingHelper
+import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.exception.RemotingConnectException
 import hcyxy.tech.remoting.server.MsgDecoder
 import hcyxy.tech.remoting.server.MsgEncoder
 import io.netty.bootstrap.Bootstrap
@@ -26,6 +29,7 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val boot = Bootstrap()
     private var workerGroup: EventLoopGroup? = null
+    //保存长连接
     private val channelTable = ConcurrentHashMap<String, ChannelWrapper>()
     private val lock = ReentrantLock()
     private val lockTime = 5000L
@@ -62,13 +66,33 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
         this.channelTable.clear()
     }
 
-    override fun invokeSync(addr: String) {
-        getOrCreateChanne(addr)
-        //TODO
+    override fun invokeSync(addr: String, proposal: Proposal, timeout: Long): Proposal {
+        val channel = getOrCreateChanne(addr)
+        if (channel != null && channel.isActive) {
+            try {
+                return invokeSyncImpl(channel, proposal, timeout)
+            } catch (e: Exception) {
+                logger.error("invoke sync,exception", e)
+                throw RemotingConnectException(addr, e)
+            }
+        } else {
+            this.closeChannel(addr, channel)
+            throw RemotingConnectException(addr)
+        }
     }
 
-    override fun invokeAsync(addr: String) {
-        //TODO
+    override fun invokeAsync(addr: String, proposal: Proposal, timeout: Long, callBack: InvokeCallback) {
+        val channel = getOrCreateChanne(addr)
+        if (channel != null && channel.isActive) {
+            try {
+                this.invokeAsyncImpl(channel, proposal, timeout, callBack)
+            } catch (e: Exception) {
+                logger.error("invoke async exception", e)
+            }
+        } else {
+            this.closeChannel(addr, channel)
+            throw RemotingConnectException(addr)
+        }
     }
 
 
@@ -90,17 +114,17 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
             try {
                 var createdConn = false
                 channelWrapper = this.channelTable[addr]
-                if (channelWrapper != null) {
+                createdConn = if (channelWrapper != null) {
                     if (channelWrapper.isOK()) {
                         return channelWrapper.getChannel()
                     } else if (!channelWrapper.getChannelFuture().isDone) {
-                        createdConn = false //正在连接中
+                        false //正在连接中
                     } else {
                         this.channelTable.remove(addr)
-                        createdConn = true
+                        true
                     }
                 } else {
-                    createdConn = true
+                    true
                 }
                 if (createdConn) {
                     val channelFuture = this.boot.connect(RemotingHelper.string2Addr(addr))
@@ -141,17 +165,54 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
         return null
     }
 
-    fun closeChannel(addr: String, channel: Channel) {
+    private fun closeChannel(addr: String, channel: Channel?) {
+        if (channel == null) {
+            return
+        }
         try {
             if (lock.tryLock(lockTime, TimeUnit.MILLISECONDS)) {
                 var removedChannel = true
+                val prev = this.channelTable[addr]
+                if (null == prev) {
+                    logger.info("the channel id:{} has been removed from the table", addr)
+                } else if (prev.getChannel() != channel) {
+                    removedChannel = false
+                    logger.info("the channel has been moved before,a new channel has been created!")
+                }
 
+                if (removedChannel) {
+                    this.channelTable.remove(addr)
+                    logger.info("has moved the channel from the table")
+                }
+
+            } else {
+                logger.warn("try to lock table,but timeout")
             }
         } catch (e: Exception) {
-
+            logger.error("close channel exception ", e)
         } finally {
             lock.unlock()
         }
     }
+
+    fun closeChannel(channel: Channel) {
+        try {
+            if (lock.tryLock(lockTime, TimeUnit.MILLISECONDS)) {
+                this.channelTable.forEach { k, v ->
+                    if (v.getChannel() == channel) {
+                        this.channelTable.remove(k)
+                        logger.info("remove the channel,addr:{}", k)
+                    }
+                }
+            } else {
+                logger.warn("try to lock the table,but timeout")
+            }
+        } catch (e: Exception) {
+            logger.error("close the channel,exception occur", e)
+        } finally {
+            lock.unlock()
+        }
+    }
+
 }
 
