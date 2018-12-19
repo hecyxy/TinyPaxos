@@ -19,7 +19,7 @@ class MsgDecoder : LengthFieldBasedFrameDecoder(FRAME_MAX_LENGTH, 0, 4, 0, 0) {
             val byteBuffer = frame.nioBuffer()
             return RemotingMsg().decode(byteBuffer)
         } catch (e: Exception) {
-            logger.info("decode error")
+            logger.error("decode error")
             ctx.channel().close().addListener { future ->
                 logger.info("close channel {}", future.isSuccess)
             }

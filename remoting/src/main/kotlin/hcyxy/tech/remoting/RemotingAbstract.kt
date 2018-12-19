@@ -2,13 +2,14 @@ package hcyxy.tech.remoting
 
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
 import hcyxy.tech.remoting.common.RemotingHelper
+import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.entity.RemotingMsg
 import io.netty.channel.Channel
+import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
-import java.lang.Exception
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
-import kotlin.math.cos
 
 /**
  * @Description server和client的公共抽象方法
@@ -35,12 +36,13 @@ abstract class RemotingAbstract() {
             responseFuture.setCause(future.cause())
             responseFuture.putResponse(null)
         }
-        return responseFuture.waitResponse(timeout) ?: if (responseFuture.isSendRequestOk()) {
-            channel.close()
-            throw Exception("send request timeout $timeout")
-        } else {
-            throw Exception("send request failed")
-        }
+        return Proposal(EventType.ACCEPTOR, 20, null)
+//        return responseFuture.waitResponse(timeout) ?: if (responseFuture.isSendRequestOk()) {
+//            channel.close()
+//            throw Exception("send request timeout $timeout")
+//        } else {
+//            throw Exception("send request failed")
+//        }
     }
 
     fun invokeAsyncImpl(channel: Channel, proposal: Proposal, timeout: Long, callback: InvokeCallback) {
@@ -82,6 +84,20 @@ abstract class RemotingAbstract() {
             } else {
                 logger.warn("try acquire timeout,waiting threads ${this.semaphoreAsync?.queueLength} semaphore permits: ${this.semaphoreAsync?.availablePermits()}")
                 throw Exception("time out")
+            }
+        }
+    }
+
+    fun processReceiveMessage(ctx: ChannelHandlerContext, proposal: Proposal) {
+        when (proposal.type) {
+            EventType.ACCEPTOR -> {
+                println("acceptor ${proposal.proposalId}")
+                ctx.writeAndFlush(proposal)
+            }
+            EventType.LEADER -> {
+                println("leader ${proposal.proposalId}")
+            }
+            else -> {
             }
         }
     }

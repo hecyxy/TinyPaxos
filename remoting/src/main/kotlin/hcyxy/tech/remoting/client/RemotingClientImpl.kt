@@ -9,15 +9,15 @@ import hcyxy.tech.remoting.exception.RemotingConnectException
 import hcyxy.tech.remoting.server.MsgDecoder
 import hcyxy.tech.remoting.server.MsgEncoder
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.EventLoopGroup
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.timeout.IdleState
+import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import org.slf4j.LoggerFactory
+import java.net.SocketAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
@@ -211,6 +211,62 @@ class RemotingClientImpl : RemotingAbstract(), RemotingClient {
             logger.error("close the channel,exception occur", e)
         } finally {
             lock.unlock()
+        }
+    }
+
+    internal inner class ClientManager : ChannelDuplexHandler() {
+        private val logger = LoggerFactory.getLogger(javaClass)
+        override fun connect(
+            ctx: ChannelHandlerContext,
+            remoteAddress: SocketAddress?,
+            localAddress: SocketAddress?,
+            promise: ChannelPromise
+        ) {
+            val local = localAddress?.toString() ?: "unknown"
+            val remote = remoteAddress?.toString() ?: "unknown"
+            logger.info("client pipeline :connect {} => {}", local, remote)
+            super.connect(ctx, remoteAddress, localAddress, promise)
+        }
+
+        override fun disconnect(ctx: ChannelHandlerContext, promise: ChannelPromise) {
+            val remoteAddress = ctx.channel().remoteAddress().toString()
+            logger.info("netty client pipeline disconnect {}", remoteAddress)
+            closeChannel(ctx.channel())
+            super.disconnect(ctx, promise)
+        }
+
+
+        override fun close(ctx: ChannelHandlerContext, promise: ChannelPromise) {
+            val remoteAddress = ctx.channel().remoteAddress().toString()
+            logger.info("client pipeline close {}", remoteAddress)
+            closeChannel(ctx.channel())
+            super.close(ctx, promise)
+        }
+
+        override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+            val remoteAddress = ctx.channel().remoteAddress().toString()
+            logger.warn("remoteAddress:{},netty client pipeline exceptionCaught exception.", remoteAddress, cause)
+            closeChannel(ctx.channel())
+        }
+
+        override fun userEventTriggered(ctx: ChannelHandlerContext, event: Any) {
+            if (event is IdleStateEvent) {
+                if (event.state() == IdleState.ALL_IDLE) {
+                    val remoteAddress = RemotingHelper.channel2Addr(ctx.channel())
+                    logger.warn("netty server idle exception [{}]", remoteAddress)
+                    RemotingHelper.closeChannel(ctx.channel())
+                }
+            }
+
+            ctx.fireUserEventTriggered(event)
+        }
+    }
+
+    internal inner class ClientHandler : SimpleChannelInboundHandler<Proposal>() {
+        private val logger = LoggerFactory.getLogger(javaClass)
+        override fun channelRead0(ctx: ChannelHandlerContext, msg: Proposal) {
+            logger.info("read message")
+            processReceiveMessage(ctx, msg)
         }
     }
 
