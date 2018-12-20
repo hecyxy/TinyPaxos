@@ -62,3 +62,4 @@ fabric.properties
 .idea/
 TinyPaxos.iml
 core/out
+remoting/out
