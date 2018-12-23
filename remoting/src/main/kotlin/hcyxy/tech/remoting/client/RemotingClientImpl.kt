@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-class RemotingClientImpl : RemotingAbstract(), RemotingClient {
+class RemotingClientImpl : RemotingAbstract(1000), RemotingClient {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     private val boot = Bootstrap()
