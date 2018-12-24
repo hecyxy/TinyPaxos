@@ -2,6 +2,7 @@ package test.paxos
 
 import hcyxy.tech.remoting.client.RemotingClientImpl
 import hcyxy.tech.remoting.common.RemotingMsgSerializable
+import hcyxy.tech.remoting.config.ClientConfig
 import hcyxy.tech.remoting.entity.ActionType
 import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
@@ -11,7 +12,7 @@ class TestNettyServer {
 }
 
 fun main() {
-    val client = RemotingClientImpl()
+    val client = RemotingClientImpl(ClientConfig())
     client.start()
     val proposal = Proposal(EventType.ACCEPTOR, ActionType.REQUEST, 100, null)
     val msg = RemotingMsgSerializable.encode(proposal)

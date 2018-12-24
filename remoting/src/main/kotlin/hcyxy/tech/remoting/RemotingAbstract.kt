@@ -16,16 +16,15 @@ import java.util.concurrent.TimeUnit
  * @Description server和client的公共抽象方法
  * 这个抽象类还可以缓存请求 启动一个定时任务 扫描缓存的请求  便于管控
  */
-abstract class RemotingAbstract() {
+abstract class RemotingAbstract {
     private val logger = LoggerFactory.getLogger(RemotingAbstract::class.java)
     // 信号量，异步调用情况会使用，防止本地Netty缓存请求过多
-    private var semaphoreAsync: Semaphore? = null
+    protected var semaphoreAsync: Semaphore? = null
     //缓存对外所有请求
     private val responseTable: ConcurrentMap<Long, ResponseFuture> = ConcurrentHashMap(256)
 
-    constructor(permitAsync: Int) : this() {
-        this.semaphoreAsync = Semaphore(permitAsync, true)
-    }
+    //允许异步请求
+//    this.semaphoreAsync = Semaphore(permitAsync, true)
 
     protected fun invokeSyncImpl(channel: Channel, proposal: Proposal, timeout: Long): Proposal {
         try {

@@ -4,6 +4,7 @@ import hcyxy.tech.remoting.InvokeCallback
 import hcyxy.tech.remoting.RemotingAbstract
 import hcyxy.tech.remoting.common.ChannelWrapper
 import hcyxy.tech.remoting.common.RemotingHelper
+import hcyxy.tech.remoting.config.ClientConfig
 import hcyxy.tech.remoting.entity.Proposal
 import hcyxy.tech.remoting.exception.RemotingConnectException
 import hcyxy.tech.remoting.server.MsgDecoder
@@ -19,12 +20,13 @@ import io.netty.handler.timeout.IdleStateHandler
 import org.slf4j.LoggerFactory
 import java.net.SocketAddress
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Semaphore
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-class RemotingClientImpl : RemotingAbstract(1000), RemotingClient {
+class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), RemotingClient {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     private val boot = Bootstrap()
@@ -32,11 +34,17 @@ class RemotingClientImpl : RemotingAbstract(1000), RemotingClient {
     //保存长连接
     private val channelTable = ConcurrentHashMap<String, ChannelWrapper>()
     private val lock = ReentrantLock()
-    private val lockTime = 5000L
-    private val channelWait = 2000L
+    private var lockTime = 5000L
+    private var channelWait = 2000L
+    private var workerThreads = 8
+
 
     init {
-        this.workerGroup = NioEventLoopGroup(1, object : ThreadFactory {
+        workerThreads = clientConfig.workerTheads
+        lockTime = clientConfig.lockTime
+        channelWait = clientConfig.channelWait
+        semaphoreAsync = Semaphore(clientConfig.permitAsync, true)
+        this.workerGroup = NioEventLoopGroup(workerThreads, object : ThreadFactory {
             val index = AtomicInteger(0)
             override fun newThread(r: Runnable): Thread {
                 return Thread(r, "client-Thread${index.incrementAndGet()}")

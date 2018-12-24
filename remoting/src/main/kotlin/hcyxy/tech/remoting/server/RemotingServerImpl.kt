@@ -3,6 +3,7 @@ package hcyxy.tech.remoting.server
 import hcyxy.tech.remoting.InvokeCallback
 import hcyxy.tech.remoting.RemotingAbstract
 import hcyxy.tech.remoting.common.RemotingHelper
+import hcyxy.tech.remoting.config.ServerConfig
 import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
 import hcyxy.tech.remoting.entity.RemotingMsg
@@ -20,27 +21,33 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.log
 
-class RemotingServerImpl : RemotingAbstract(), RemotingServer {
+class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), RemotingServer {
     private val logger = LoggerFactory.getLogger(RemotingServerImpl::class.java)
     private val server: ServerBootstrap = ServerBootstrap()
     private var workGroup: NioEventLoopGroup
     private var bossGroup: NioEventLoopGroup
     private var port = 0
+    private var workerThreads = 8
+    private var bossThreads = 1
     private val activeConn = AtomicInteger(0)
 
     init {
-        workGroup = NioEventLoopGroup(8, object : ThreadFactory {
+        port = serverConfig.port
+        bossThreads = serverConfig.bossThreads
+        workerThreads = serverConfig.workderThreads
+        workGroup = NioEventLoopGroup(workerThreads, object : ThreadFactory {
             private val threadIndex = AtomicInteger(0)
             override fun newThread(r: Runnable?): Thread {
                 return Thread(r, "NettyWorkGroup_${this.threadIndex.incrementAndGet()}")
             }
         })
-        bossGroup = NioEventLoopGroup(1, object : ThreadFactory {
+        bossGroup = NioEventLoopGroup(bossThreads, object : ThreadFactory {
             private val threadIndex = AtomicInteger(0)
             override fun newThread(r: Runnable?): Thread {
                 return Thread(r, "NettyBossSelector_${this.threadIndex.incrementAndGet()}")
             }
         })
+
     }
 
     override fun start() {
