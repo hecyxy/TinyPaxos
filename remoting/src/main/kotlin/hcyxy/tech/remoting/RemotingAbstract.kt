@@ -3,14 +3,14 @@ package hcyxy.tech.remoting
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
 import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.entity.ActionType
+import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
+import java.util.HashMap
+import java.util.concurrent.*
+import kotlin.math.log
 
 /**
  * @Description server和client的公共抽象方法
@@ -22,7 +22,10 @@ abstract class RemotingAbstract {
     protected var semaphoreAsync: Semaphore? = null
     //缓存对外所有请求
     private val responseTable: ConcurrentMap<Long, ResponseFuture> = ConcurrentHashMap(256)
-
+    // 注册的各个RPC处理器
+    protected val processorTable = HashMap<Int, Pair<RequestProcessor, ExecutorService>>(
+        64
+    )
     //允许异步请求
 //    this.semaphoreAsync = Semaphore(permitAsync, true)
 
@@ -108,8 +111,9 @@ abstract class RemotingAbstract {
     }
 
     private fun processRequest(ctx: ChannelHandlerContext, proposal: Proposal) {
-        val response = Proposal(proposal.type, ActionType.RESPONSE, proposal.proposalId, null)
-        ctx.writeAndFlush(response)
+        val processor = this.processorTable[proposal.eventType.index]
+        val result = processor?.first?.processRequest(proposal)
+        result?.let { ctx.writeAndFlush(it) }
     }
 
     private fun processResponse(ctx: ChannelHandlerContext, proposal: Proposal) {

@@ -2,6 +2,7 @@ package hcyxy.tech.remoting.server
 
 import hcyxy.tech.remoting.InvokeCallback
 import hcyxy.tech.remoting.RemotingAbstract
+import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.config.ServerConfig
 import hcyxy.tech.remoting.entity.EventType
@@ -17,11 +18,14 @@ import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import org.slf4j.LoggerFactory
 import java.net.InetSocketAddress
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.log
 
 class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), RemotingServer {
+
     private val logger = LoggerFactory.getLogger(RemotingServerImpl::class.java)
     private val server: ServerBootstrap = ServerBootstrap()
     private var workGroup: NioEventLoopGroup
@@ -30,20 +34,28 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
     private var workerThreads = 8
     private var bossThreads = 1
     private val activeConn = AtomicInteger(0)
+    // 处理Callback应答器
+    private val publicExecutor: ExecutorService
 
     init {
         port = serverConfig.port
         bossThreads = serverConfig.bossThreads
         workerThreads = serverConfig.workderThreads
+        this.publicExecutor = Executors.newFixedThreadPool(serverConfig.publicThreadNum, object : ThreadFactory {
+            private val threadIndex = AtomicInteger(0)
+            override fun newThread(r: Runnable): Thread {
+                return Thread(r, "PublichThread_${this.threadIndex.incrementAndGet()}")
+            }
+        })
         workGroup = NioEventLoopGroup(workerThreads, object : ThreadFactory {
             private val threadIndex = AtomicInteger(0)
-            override fun newThread(r: Runnable?): Thread {
+            override fun newThread(r: Runnable): Thread {
                 return Thread(r, "NettyWorkGroup_${this.threadIndex.incrementAndGet()}")
             }
         })
         bossGroup = NioEventLoopGroup(bossThreads, object : ThreadFactory {
             private val threadIndex = AtomicInteger(0)
-            override fun newThread(r: Runnable?): Thread {
+            override fun newThread(r: Runnable): Thread {
                 return Thread(r, "NettyBossSelector_${this.threadIndex.incrementAndGet()}")
             }
         })
@@ -96,18 +108,25 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
         }
     }
 
+    override fun registerProcessor(requestCode: Int, processor: RequestProcessor, executor: ExecutorService?) {
+        val pair = if (executor == null) {
+            Pair(processor, this.publicExecutor)
+        } else {
+            Pair(processor, executor)
+        }
+        this.processorTable[requestCode] = pair
+    }
+
 
     internal inner class ConnectManager : ChannelDuplexHandler() {
         private val logger = LoggerFactory.getLogger(ConnectManager::class.java)
 
-        @Throws(Exception::class)
         override fun channelRegistered(ctx: ChannelHandlerContext) {
             val remoteAddress = ctx.channel().remoteAddress().toString()
             logger.debug("receive msg from ... {}", remoteAddress)
             super.channelRegistered(ctx)
         }
 
-        @Throws(Exception::class)
         override fun channelUnregistered(ctx: ChannelHandlerContext) {
             val remoteAddress = ctx.channel().remoteAddress().toString()
             logger.debug("unregister ip ... {}", remoteAddress)
@@ -115,7 +134,6 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
             super.channelUnregistered(ctx)
         }
 
-        @Throws(Exception::class)
         override fun channelActive(ctx: ChannelHandlerContext) {
             val remoteAddress = ctx.channel().remoteAddress().toString()
             logger.info("server pipeline:channelActive,the channel[{}]", remoteAddress)
@@ -123,7 +141,6 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
             super.channelActive(ctx)
         }
 
-        @Throws(Exception::class)
         override fun channelInactive(ctx: ChannelHandlerContext) {
             val remoteAddress = ctx.channel().remoteAddress().toString()
             logger.info("server pipeline:channelInActive,the channel[{}]", remoteAddress)
@@ -164,7 +181,6 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
             logger.info("receive: $msg")
             processReceiveMessage(ctx, msg)
         }
-
     }
 
 }

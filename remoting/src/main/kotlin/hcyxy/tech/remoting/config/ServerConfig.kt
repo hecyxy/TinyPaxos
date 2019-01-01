@@ -5,4 +5,5 @@ class ServerConfig {
     var bossThreads = 1
     var workderThreads = 8
     var maxConnection = 2000
+    var publicThreadNum = 6
 }
