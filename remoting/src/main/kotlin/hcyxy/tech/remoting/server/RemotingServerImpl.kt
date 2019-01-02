@@ -68,7 +68,7 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
             .option(ChannelOption.SO_REUSEADDR, true)
             .option(ChannelOption.SO_KEEPALIVE, true)
             .option(ChannelOption.TCP_NODELAY, true)
-            .localAddress(InetSocketAddress(8888))
+            .localAddress(InetSocketAddress(this.port))
             .childHandler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
                     ch.pipeline().addLast(MsgEncoder())
@@ -82,6 +82,7 @@ class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), Remot
             val future = server.bind().sync()
             val addr = future.channel().localAddress() as InetSocketAddress
             this.port = addr.port
+            logger.info("server start port $port")
         } catch (e: Exception) {
             bossGroup.shutdownGracefully()
             workGroup.shutdownGracefully()

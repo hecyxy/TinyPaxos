@@ -12,21 +12,17 @@ import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.server.RemotingServer
 import hcyxy.tech.remoting.server.RemotingServerImpl
 import org.slf4j.LoggerFactory
+import java.io.FileInputStream
+import java.util.*
 import java.util.concurrent.*
 
-class PaxosServer {
+class PaxosServer(private val param: Array<String>) {
     private val logger = LoggerFactory.getLogger(PaxosServer::class.java)
     private var publicExecutor: ExecutorService? = null
-    private var path: String? = null
-
-    constructor(param: String?) {
-        this.path = param
-    }
-
     fun startPaxosServer() {
         try {
-            val serverConfig = ServerConfig()
-            val clientConfig = ClientConfig()
+            val serverConfig = parseServerParam()
+            val clientConfig = parseClientParam()
             val controller = ServerController(serverConfig, clientConfig)
             controller.start()
             Runtime.getRuntime().addShutdownHook(object : Thread() {
@@ -39,18 +35,60 @@ class PaxosServer {
         }
     }
 
+    private fun parseServerParam(): ServerConfig {
+        var input: FileInputStream? = null
+        val serverConfig = ServerConfig()
+        try {
+            if (param[0].isNotBlank()) {
+                val pro = Properties()
+                input = FileInputStream(param[0])
+                pro.load(input)
+                pro.getProperty("port")?.let { serverConfig.port = it.toInt() }
+                pro.getProperty("bossThreads")?.let { serverConfig.bossThreads = it.toInt() }
+                pro.getProperty("maxConnection")?.let { serverConfig.maxConnection = it.toInt() }
+                pro.getProperty("publicThreadNum")?.let { serverConfig.publicThreadNum = it.toInt() }
+            }
+        } catch (e: Exception) {
+            logger.warn("parse param failed", e)
+        } finally {
+            input?.let { it.close() }
+        }
+        return serverConfig
+    }
+
+    private fun parseClientParam(): ClientConfig {
+        var input: FileInputStream? = null
+        val serverConfig = ClientConfig()
+        try {
+            if (param[0].isNotBlank()) {
+                val pro = Properties()
+                input = FileInputStream(param[0])
+                pro.load(input)
+                pro.getProperty("workerThreads")?.let { serverConfig.workerThreads = it.toInt() }
+                pro.getProperty("lockTime")?.let { serverConfig.lockTime = it.toLong() }
+                pro.getProperty("channelWait")?.let { serverConfig.channelWait = it.toLong() }
+                pro.getProperty("permitAsync")?.let { serverConfig.permitAsync = it.toInt() }
+            }
+        } catch (e: Exception) {
+            logger.warn("parse param failed", e)
+        } finally {
+            input?.let { it.close() }
+        }
+        return serverConfig
+    }
+
     internal inner class ServerController(
         private val serverConfig: ServerConfig,
         private val clientConfig: ClientConfig
     ) {
         private var remotingServer: RemotingServer? = null
 
-        private var remotingCient: RemotingClient? = null
+        private var remotingClient: RemotingClient? = null
 
         private var blockingQueue: BlockingQueue<Runnable>? = null
         private fun initialize() {
             blockingQueue = LinkedBlockingQueue<Runnable>(1024 * 10)
-            remotingCient = RemotingClientImpl(clientConfig)
+            remotingClient = RemotingClientImpl(clientConfig)
             remotingServer = RemotingServerImpl(serverConfig)
             publicExecutor = ThreadPoolExecutor(
                 8, 8,
@@ -59,23 +97,23 @@ class PaxosServer {
                 blockingQueue,
                 ThreadFactoryImpl("PublicExecutor")
             )
-            val proposerProcessor = ProposerProcessor(remotingCient)
+            val proposerProcessor = ProposerProcessor(remotingClient)
             remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
-            val acceptorProcessor = AcceptorProcessor(remotingCient)
+            val acceptorProcessor = AcceptorProcessor(remotingClient)
             remotingServer?.registerProcessor(EventType.ACCEPTOR.index, acceptorProcessor, publicExecutor)
-            val learnerProcessor = LearnerProcessor(remotingCient)
+            val learnerProcessor = LearnerProcessor(remotingClient)
             remotingServer?.registerProcessor(EventType.LEARNER.index, learnerProcessor, publicExecutor)
         }
 
         fun start() {
             initialize()
             this.remotingServer?.start()
-            this.remotingCient?.start()
+            this.remotingClient?.start()
 
         }
 
         fun shutdown() {
-            this.remotingCient?.shutdown()
+            this.remotingClient?.shutdown()
             this.remotingServer?.shutdown()
             this.blockingQueue?.clear()
         }

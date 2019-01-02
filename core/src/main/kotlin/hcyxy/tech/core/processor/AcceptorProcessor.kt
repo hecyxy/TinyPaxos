@@ -13,7 +13,7 @@ class AcceptorProcessor : RequestProcessor {
     constructor(client: RemotingClient?) {
         this.remotingClient = client
     }
-    override fun processRequest(ctx: ChannelHandlerContext, proposal: Proposal): Proposal {
+    override fun processRequest(proposal: Proposal): Proposal {
         return Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)
     }
 }

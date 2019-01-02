@@ -1,7 +1,7 @@
 package hcyxy.tech.remoting.config
 
 class ClientConfig {
-    var workerTheads = 8
+    var workerThreads = 8
     //加锁时间
     var lockTime = 5000L
     //channel最长等待时间

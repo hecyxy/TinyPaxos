@@ -40,7 +40,7 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
 
 
     init {
-        workerThreads = clientConfig.workerTheads
+        workerThreads = clientConfig.workerThreads
         lockTime = clientConfig.lockTime
         channelWait = clientConfig.channelWait
         semaphoreAsync = Semaphore(clientConfig.permitAsync, true)
