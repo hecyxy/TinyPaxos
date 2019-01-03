@@ -1,6 +1,6 @@
 package hcyxy.tech.core
 
-import hcyxy.tech.core.common.ThreadFactoryImpl
+import hcyxy.tech.core.service.ThreadFactoryImpl
 import hcyxy.tech.core.processor.AcceptorProcessor
 import hcyxy.tech.core.processor.LearnerProcessor
 import hcyxy.tech.core.processor.ProposerProcessor
@@ -17,8 +17,11 @@ import java.util.*
 import java.util.concurrent.*
 
 class PaxosServer(private val param: Array<String>) {
+
     private val logger = LoggerFactory.getLogger(PaxosServer::class.java)
     private var publicExecutor: ExecutorService? = null
+    private var machineId: Int = 1
+    private
     fun startPaxosServer() {
         try {
             val serverConfig = parseServerParam()
@@ -47,6 +50,7 @@ class PaxosServer(private val param: Array<String>) {
                 pro.getProperty("bossThreads")?.let { serverConfig.bossThreads = it.toInt() }
                 pro.getProperty("maxConnection")?.let { serverConfig.maxConnection = it.toInt() }
                 pro.getProperty("publicThreadNum")?.let { serverConfig.publicThreadNum = it.toInt() }
+                pro.getProperty("machineId")?.let { machineId = it.toInt() }
             }
         } catch (e: Exception) {
             logger.warn("parse param failed", e)
@@ -92,16 +96,17 @@ class PaxosServer(private val param: Array<String>) {
             remotingServer = RemotingServerImpl(serverConfig)
             publicExecutor = ThreadPoolExecutor(
                 8, 8,
-                1000 * 60, //
-                TimeUnit.MILLISECONDS, //
+                1000 * 60,
+                TimeUnit.MILLISECONDS,
                 blockingQueue,
                 ThreadFactoryImpl("PublicExecutor")
             )
-            val proposerProcessor = ProposerProcessor(remotingClient)
+            val client = remotingClient ?: throw Exception("服务启动异常")
+            val proposerProcessor = ProposerProcessor(client, machineId)
             remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
-            val acceptorProcessor = AcceptorProcessor(remotingClient)
+            val acceptorProcessor = AcceptorProcessor(client, machineId)
             remotingServer?.registerProcessor(EventType.ACCEPTOR.index, acceptorProcessor, publicExecutor)
-            val learnerProcessor = LearnerProcessor(remotingClient)
+            val learnerProcessor = LearnerProcessor(client, machineId)
             remotingServer?.registerProcessor(EventType.LEARNER.index, learnerProcessor, publicExecutor)
         }
 

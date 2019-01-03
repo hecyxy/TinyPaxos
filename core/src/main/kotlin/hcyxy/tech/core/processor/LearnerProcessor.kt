@@ -7,12 +7,7 @@ import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
 import io.netty.channel.ChannelHandlerContext
 
-class LearnerProcessor : RequestProcessor {
-    private var remotingClient: RemotingClient? = null
-
-    constructor(client: RemotingClient?) {
-        this.remotingClient = client
-    }
+class LearnerProcessor(private val client: RemotingClient, private val machineId: Int) : RequestProcessor {
 
     override fun processRequest(proposal: Proposal): Proposal {
         return Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)
