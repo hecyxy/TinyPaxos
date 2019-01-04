@@ -4,6 +4,7 @@ import hcyxy.tech.core.service.ThreadFactoryImpl
 import hcyxy.tech.core.processor.AcceptorProcessor
 import hcyxy.tech.core.processor.LearnerProcessor
 import hcyxy.tech.core.processor.ProposerProcessor
+import hcyxy.tech.core.service.notnull
 import hcyxy.tech.remoting.client.RemotingClient
 import hcyxy.tech.remoting.client.RemotingClientImpl
 import hcyxy.tech.remoting.config.ClientConfig
@@ -101,7 +102,7 @@ class PaxosServer(private val param: Array<String>) {
                 blockingQueue,
                 ThreadFactoryImpl("PublicExecutor")
             )
-            val client = remotingClient ?: throw Exception("服务启动异常")
+            val client = notnull(remotingClient, "client启动异常")
             val proposerProcessor = ProposerProcessor(client, machineId)
             remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
             val acceptorProcessor = AcceptorProcessor(client, machineId)

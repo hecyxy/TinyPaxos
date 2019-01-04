@@ -32,7 +32,12 @@ class ProposerProcessor(private val client: RemotingClient, private val machineI
         val packet = proposal.packet ?: return Proposal(EventType.LEARNER, ActionType.RESPONSE, 0, null)
         return when (packet.packetType) {
             ProposerEventType.Submit.index -> {
-                Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, Packet(packet.logId,AcceptorEventType.Prepare.index,"hello"))
+                Proposal(
+                    EventType.ACCEPTOR,
+                    ActionType.RESPONSE,
+                    20,
+                    Packet(packet.logId, AcceptorEventType.Prepare.index, "hello")
+                )
             }
             ProposerEventType.PrepareResponse.index -> {
                 Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)

@@ -120,9 +120,7 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
         }
         if (lock.tryLock(lockTime, TimeUnit.SECONDS)) {
             try {
-                var createdConn = false
-                channelWrapper = this.channelTable[addr]
-                createdConn = if (channelWrapper != null) {
+                val createdConn: Boolean = if (channelWrapper != null) {
                     if (channelWrapper.isOK()) {
                         return channelWrapper.getChannel()
                     } else if (!channelWrapper.getChannelFuture().isDone) {
@@ -134,6 +132,7 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
                 } else {
                     true
                 }
+                channelWrapper = this.channelTable[addr]
                 if (createdConn) {
                     val channelFuture = this.boot.connect(RemotingHelper.string2Addr(addr))
                     channelWrapper = ChannelWrapper(channelFuture)
