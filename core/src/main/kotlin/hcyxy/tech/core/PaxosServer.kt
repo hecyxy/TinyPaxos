@@ -1,10 +1,12 @@
 package hcyxy.tech.core
 
-import hcyxy.tech.core.service.ThreadFactoryImpl
+import hcyxy.tech.core.constants.PaxosConfig
 import hcyxy.tech.core.processor.AcceptorProcessor
 import hcyxy.tech.core.processor.LearnerProcessor
 import hcyxy.tech.core.processor.ProposerProcessor
-import hcyxy.tech.core.service.notnull
+import hcyxy.tech.core.service.ThreadFactoryImpl
+import hcyxy.tech.core.util.FileUtil
+import hcyxy.tech.core.util.notnull
 import hcyxy.tech.remoting.client.RemotingClient
 import hcyxy.tech.remoting.client.RemotingClientImpl
 import hcyxy.tech.remoting.config.ClientConfig
@@ -13,18 +15,20 @@ import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.server.RemotingServer
 import hcyxy.tech.remoting.server.RemotingServerImpl
 import org.slf4j.LoggerFactory
-import java.io.FileInputStream
-import java.util.*
 import java.util.concurrent.*
 
 class PaxosServer(private val param: Array<String>) {
 
     private val logger = LoggerFactory.getLogger(PaxosServer::class.java)
     private var publicExecutor: ExecutorService? = null
-    private var machineId: Int = 1
-    private
+    private var paxosConfig: PaxosConfig? = null
     fun startPaxosServer() {
         try {
+            if (param.size == 1) {
+                paxosConfig = FileUtil.file2Json(param[0])
+            } else {
+                throw Exception("缺失参数")
+            }
             val serverConfig = parseServerParam()
             val clientConfig = parseClientParam()
             val controller = ServerController(serverConfig, clientConfig)
@@ -40,46 +44,38 @@ class PaxosServer(private val param: Array<String>) {
     }
 
     private fun parseServerParam(): ServerConfig {
-        var input: FileInputStream? = null
+
         val serverConfig = ServerConfig()
         try {
-            if (param[0].isNotBlank()) {
-                val pro = Properties()
-                input = FileInputStream(param[0])
-                pro.load(input)
-                pro.getProperty("port")?.let { serverConfig.port = it.toInt() }
-                pro.getProperty("bossThreads")?.let { serverConfig.bossThreads = it.toInt() }
-                pro.getProperty("maxConnection")?.let { serverConfig.maxConnection = it.toInt() }
-                pro.getProperty("publicThreadNum")?.let { serverConfig.publicThreadNum = it.toInt() }
-                pro.getProperty("machineId")?.let { machineId = it.toInt() }
-            }
+            serverConfig.port = getServerPort()
+            paxosConfig?.bossThreads?.let { serverConfig.bossThreads = it }
+            paxosConfig?.maxConnection?.let { serverConfig.maxConnection = it }
+            paxosConfig?.publicThreadNum?.let { serverConfig.publicThreadNum = it }
         } catch (e: Exception) {
             logger.warn("parse param failed", e)
-        } finally {
-            input?.let { it.close() }
         }
         return serverConfig
     }
 
     private fun parseClientParam(): ClientConfig {
-        var input: FileInputStream? = null
         val serverConfig = ClientConfig()
         try {
-            if (param[0].isNotBlank()) {
-                val pro = Properties()
-                input = FileInputStream(param[0])
-                pro.load(input)
-                pro.getProperty("workerThreads")?.let { serverConfig.workerThreads = it.toInt() }
-                pro.getProperty("lockTime")?.let { serverConfig.lockTime = it.toLong() }
-                pro.getProperty("channelWait")?.let { serverConfig.channelWait = it.toLong() }
-                pro.getProperty("permitAsync")?.let { serverConfig.permitAsync = it.toInt() }
-            }
+            paxosConfig?.workerThreads?.let { serverConfig.workerThreads = it }
+            paxosConfig?.lockTime?.let { serverConfig.lockTime = it }
+            paxosConfig?.channelWait?.let { serverConfig.channelWait = it }
+            paxosConfig?.permitAsync?.let { serverConfig.permitAsync = it }
         } catch (e: Exception) {
             logger.warn("parse param failed", e)
-        } finally {
-            input?.let { it.close() }
         }
         return serverConfig
+    }
+
+    private fun getServerPort(): Int {
+        val serverList = notnull(paxosConfig?.server, "配置信息错误")
+        val node = serverList.associateBy { it.id }
+        val serverId = notnull(paxosConfig?.serverId, "配置信息错误")
+        val port = notnull(node[serverId]?.port, "配置信息错误")
+        return port
     }
 
     internal inner class ServerController(
@@ -103,11 +99,13 @@ class PaxosServer(private val param: Array<String>) {
                 ThreadFactoryImpl("PublicExecutor")
             )
             val client = notnull(remotingClient, "client启动异常")
-            val proposerProcessor = ProposerProcessor(client, machineId)
+            val serverId = notnull(paxosConfig?.serverId, "配置信息错误")
+            val serverList = notnull(paxosConfig?.server, "配置信息错误")
+            val proposerProcessor = ProposerProcessor(serverId, serverList, client)
             remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
-            val acceptorProcessor = AcceptorProcessor(client, machineId)
+            val acceptorProcessor = AcceptorProcessor(serverId, serverList, client)
             remotingServer?.registerProcessor(EventType.ACCEPTOR.index, acceptorProcessor, publicExecutor)
-            val learnerProcessor = LearnerProcessor(client, machineId)
+            val learnerProcessor = LearnerProcessor(serverId, serverList, client)
             remotingServer?.registerProcessor(EventType.LEARNER.index, learnerProcessor, publicExecutor)
         }
 

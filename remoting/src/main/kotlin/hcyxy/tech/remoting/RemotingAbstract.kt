@@ -3,12 +3,15 @@ package hcyxy.tech.remoting
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
 import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.entity.ActionType
+import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @Description server和client的公共抽象方法
@@ -26,10 +29,11 @@ abstract class RemotingAbstract {
     )
     //允许异步请求
 //    this.semaphoreAsync = Semaphore(permitAsync, true)
+    private val increment = AtomicLong(0)
 
     protected fun invokeSyncImpl(channel: Channel, proposal: Proposal, timeout: Long): Proposal {
         try {
-            val responseFuture = ResponseFuture(proposal.proposalId, timeout, null, null)
+            val responseFuture = ResponseFuture(increment.incrementAndGet(), timeout, null, null)
             this.responseTable[proposal.proposalId] = responseFuture
             channel.writeAndFlush(proposal).addListener { future ->
                 if (future.isSuccess) {
@@ -63,7 +67,7 @@ abstract class RemotingAbstract {
                 once.release()
                 throw Exception("invoke async callback timeout")
             }
-            val responseFuture = ResponseFuture(proposal.proposalId, timeout - cost, callback, once)
+            val responseFuture = ResponseFuture(increment.incrementAndGet(), timeout - cost, callback, once)
             this.responseTable[proposal.proposalId] = responseFuture
             try {
                 channel.writeAndFlush(proposal).addListener { future ->

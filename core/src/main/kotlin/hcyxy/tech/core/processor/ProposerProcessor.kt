@@ -1,6 +1,7 @@
 package hcyxy.tech.core.processor
 
 import hcyxy.tech.core.constants.AcceptorEventType
+import hcyxy.tech.core.constants.PaxosConfig
 import hcyxy.tech.core.constants.ProposerEventType
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
@@ -8,9 +9,12 @@ import hcyxy.tech.remoting.entity.ActionType
 import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Packet
 import hcyxy.tech.remoting.entity.Proposal
-import java.lang.Exception
 
-class ProposerProcessor(private val client: RemotingClient, private val machineId: Int) : RequestProcessor {
+class ProposerProcessor(
+    private val serverId: Int,
+    private val serverList: List<PaxosConfig.ServerNode>,
+    private val client: RemotingClient
+) : RequestProcessor {
 
     /**
      * @Description 执行prepare流程
@@ -21,7 +25,7 @@ class ProposerProcessor(private val client: RemotingClient, private val machineI
      * @Description 获取全局递增提案ID
      */
     fun getMaxProposalId(): Long {
-        return "$machineId${System.currentTimeMillis()}".toLong()
+        return "$serverId${System.currentTimeMillis()}".toLong()
     }
 
     fun prepare() {
@@ -29,26 +33,39 @@ class ProposerProcessor(private val client: RemotingClient, private val machineI
     }
 
     override fun processRequest(proposal: Proposal): Proposal {
-        val packet = proposal.packet ?: return Proposal(EventType.LEARNER, ActionType.RESPONSE, 0, null)
+        val proposal = Proposal()
+        proposal.eventType = EventType.ACCEPTOR
+        proposal.actionType = ActionType.REQUEST
+        proposal.proposalId = 100
+        val packet = proposal.packet ?: return proposal
         return when (packet.packetType) {
             ProposerEventType.Submit.index -> {
-                Proposal(
-                    EventType.ACCEPTOR,
-                    ActionType.RESPONSE,
-                    20,
-                    Packet(packet.logId, AcceptorEventType.Prepare.index, "hello")
-                )
+                sendPrepare()
+                proposal
             }
             ProposerEventType.PrepareResponse.index -> {
-                Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)
+               proposal
             }
             ProposerEventType.AcceptResponse.index -> {
-                Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)
+                proposal
             }
             else -> {
-                Proposal(EventType.ACCEPTOR, ActionType.RESPONSE, 20, null)
+                proposal
             }
         }
     }
 
+    /**
+     * @Description 发送prepare
+     */
+    private fun sendPrepare() {
+        val proposal = Proposal()
+        proposal.eventType = EventType.ACCEPTOR
+        proposal.actionType = ActionType.REQUEST
+        proposal.proposalId = 100
+        serverList.forEach {
+            if (it.id != serverId)
+                client.invokeSync("${it.host}:${it.port}", proposal, 2000)
+        }
+    }
 }

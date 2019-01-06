@@ -21,11 +21,11 @@ class RemotingMsg {
     }
 
     fun decode(buffer: ByteBuffer): Proposal {
-        println("limit :" + buffer.limit())
+//        println("limit :" + buffer.limit())
         val length = buffer.int
-        println("total length:$length")
+//        println("total length:$length")
         val bodyLength = buffer.int
-        println("header length:$bodyLength")
+//        println("header length:$bodyLength")
         val body = ByteArray(bodyLength)
         buffer.get(body)
         return RemotingMsgSerializable.decode(body, Proposal::class.java)

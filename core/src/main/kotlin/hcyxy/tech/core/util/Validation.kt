@@ -1,4 +1,4 @@
-package hcyxy.tech.core.service
+package hcyxy.tech.core.util
 
 private fun throwException(msg: String): Nothing {
     throw Exception(msg)
