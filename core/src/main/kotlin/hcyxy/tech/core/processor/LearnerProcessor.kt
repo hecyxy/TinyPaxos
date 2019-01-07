@@ -1,5 +1,6 @@
 package hcyxy.tech.core.processor
 
+import hcyxy.tech.core.constants.LearnerEventType
 import hcyxy.tech.core.constants.PaxosConfig
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
@@ -15,10 +16,15 @@ class LearnerProcessor(
 ) : RequestProcessor {
 
     override fun processRequest(proposal: Proposal): Proposal {
-        val proposal = Proposal()
-        proposal.eventType = EventType.ACCEPTOR
-        proposal.actionType = ActionType.REQUEST
-        proposal.proposalId = 100
+        val packetType = proposal.packet?.packetType ?: return proposal
+        when (packetType) {
+            LearnerEventType.LearnRequest.index -> {
+
+            }
+            LearnerEventType.LearnResponse.index -> {
+
+            }
+        }
         return proposal
     }
 }

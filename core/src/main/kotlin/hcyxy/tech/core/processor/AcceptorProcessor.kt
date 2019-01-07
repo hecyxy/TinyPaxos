@@ -1,5 +1,6 @@
 package hcyxy.tech.core.processor
 
+import hcyxy.tech.core.constants.AcceptorEventType
 import hcyxy.tech.core.constants.PaxosConfig
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
@@ -16,9 +17,16 @@ class AcceptorProcessor(
 
     override fun processRequest(proposal: Proposal): Proposal {
         val proposal = Proposal()
-        proposal.eventType = EventType.ACCEPTOR
-        proposal.actionType = ActionType.REQUEST
-        proposal.proposalId = 100
+        val packetType = proposal.packet?.packetType ?: return proposal
+        when (packetType) {
+            AcceptorEventType.Prepare.index -> {
+
+            }
+            AcceptorEventType.Accept.index -> {
+
+            }
+
+        }
         return proposal
     }
 }

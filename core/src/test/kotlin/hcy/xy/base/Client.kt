@@ -11,7 +11,7 @@ fun main(vararg args: String) {
     val client = RemotingClientImpl(ClientConfig())
     client.start()
 //    val proposal = Proposal(EventType.ACCEPTOR, ActionType.REQUEST, 100, null)
-    val packet = Packet(0, 0, "hello")
+    val packet = Packet(0, 0, "hello", null, null, null, null, 20)
     val proposal = Proposal()
     proposal.eventType = EventType.PROPOSER
     proposal.actionType = ActionType.REQUEST
