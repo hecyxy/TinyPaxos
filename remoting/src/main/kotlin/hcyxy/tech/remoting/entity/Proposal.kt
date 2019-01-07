@@ -10,4 +10,5 @@ class Proposal {
     var proposalId: Long = 0
     var message: String = ""
     var packet: Packet? = null
+    var remotingCode: RemotingCode? = RemotingCode.NORMAL
 }

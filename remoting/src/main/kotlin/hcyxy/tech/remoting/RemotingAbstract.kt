@@ -3,14 +3,14 @@ package hcyxy.tech.remoting
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
 import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.entity.ActionType
-import hcyxy.tech.remoting.entity.EventType
 import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.entity.RemotingCode
+import hcyxy.tech.remoting.util.ProposalUtil
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -48,9 +48,25 @@ abstract class RemotingAbstract {
             }
             return responseFuture.waitResponse(timeout) ?: if (responseFuture.isSendRequestOk()) {
                 channel.close()
-                throw Exception("send request timeout $timeout")
+                logger.warn("send message timeout")
+                ProposalUtil.generateProposal(
+                    proposal.eventType,
+                    ActionType.RESPONSE,
+                    proposal.proposalId,
+                    "sync invoke send message timeout",
+                    proposal.packet,
+                    RemotingCode.TIMEOUT
+                )
             } else {
-                throw Exception("send request failed")
+                logger.warn("send message failed")
+                ProposalUtil.generateProposal(
+                    proposal.eventType,
+                    ActionType.RESPONSE,
+                    proposal.proposalId,
+                    "send message failed",
+                    proposal.packet,
+                    RemotingCode.SEND_MESSAGE_FAILED
+                )
             }
         } finally {
             this.responseTable.remove(proposal.proposalId)
@@ -65,7 +81,7 @@ abstract class RemotingAbstract {
             val once = FlexibleReleaseSemaphore(this.semaphoreAsync, 1)
             if (timeout < cost) {
                 once.release()
-                throw Exception("invoke async callback timeout")
+                logger.warn("invoke async callback timeout")
             }
             val responseFuture = ResponseFuture(increment.incrementAndGet(), timeout - cost, callback, once)
             this.responseTable[proposal.proposalId] = responseFuture
@@ -88,15 +104,13 @@ abstract class RemotingAbstract {
                 }
             } catch (e: Exception) {
                 responseFuture.release()
-                logger.warn("send request exception", e)
-                throw Exception("addr {${RemotingHelper.channel2Addr(channel)}} exception")
+                logger.warn("address {${RemotingHelper.channel2Addr(channel)}} exception ，send request exception", e)
             }
         } else {
             if (timeout <= 0) {
                 logger.warn("invoke async too fast")
             } else {
                 logger.warn("try acquire timeout,waiting threads ${this.semaphoreAsync?.queueLength} semaphore permits: ${this.semaphoreAsync?.availablePermits()}")
-                throw Exception("time out")
             }
         }
     }
@@ -115,13 +129,28 @@ abstract class RemotingAbstract {
     private fun processRequest(ctx: ChannelHandlerContext, proposal: Proposal) {
         val processor = this.processorTable[proposal.eventType.index]
         val result = processor?.first?.processRequest(proposal)
-        result?.let { ctx.writeAndFlush(it) }
+        if (result == null) {
+            val temp = ProposalUtil.generateProposal(
+                proposal.eventType,
+                ActionType.RESPONSE,
+                proposal.proposalId,
+                "unknown processor",
+                proposal.packet,
+                RemotingCode.UNKNOWN_PROCESSOR
+            )
+            ctx.writeAndFlush(temp)
+        } else {
+            ctx.writeAndFlush(result)
+        }
     }
 
     private fun processResponse(ctx: ChannelHandlerContext, proposal: Proposal) {
         val future = responseTable[proposal.proposalId]
-        future?.putResponse(proposal)
-        future?.executeCallback()
+        if (future != null) {
+            future.putResponse(proposal)
+            future.executeCallback()
+        } else {
+            logger.warn("have received response, but do not find any request, address: ${RemotingHelper.channel2Addr(ctx.channel())}")
+        }
     }
-
 }
