@@ -101,10 +101,10 @@ class PaxosServer(private val param: Array<String>) {
             val client = notnull(remotingClient, "client启动异常")
             val serverId = notnull(paxosConfig?.serverId, "配置信息错误")
             val serverList = notnull(paxosConfig?.server, "配置信息错误")
-            val proposerProcessor = ProposerProcessor(serverId, serverList, client)
-            remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
             val acceptorProcessor = AcceptorProcessor(serverId, serverList, client)
             remotingServer?.registerProcessor(EventType.ACCEPTOR.index, acceptorProcessor, publicExecutor)
+            val proposerProcessor = ProposerProcessor(serverId, serverList, client, acceptorProcessor)
+            remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
             val learnerProcessor = LearnerProcessor(serverId, serverList, client)
             remotingServer?.registerProcessor(EventType.LEARNER.index, learnerProcessor, publicExecutor)
         }

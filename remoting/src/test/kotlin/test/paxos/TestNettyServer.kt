@@ -17,7 +17,7 @@ fun main() {
     val proposal = Proposal()
     proposal.eventType = EventType.ACCEPTOR
     proposal.actionType = ActionType.REQUEST
-    proposal.proposalId = 100
+    proposal.requestId = 100
     val msg = RemotingMsgSerializable.encode(proposal)
     val resp = client.invokeSync("127.0.0.1:8088", proposal, 1000)
     println("receive $resp")

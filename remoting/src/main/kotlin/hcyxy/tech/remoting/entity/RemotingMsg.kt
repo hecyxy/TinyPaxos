@@ -12,7 +12,7 @@ class RemotingMsg {
         val size = body?.size ?: 0
         val len = 4 + size
         val buffer = ByteBuffer.allocate(4 + len)
-        System.out.printf("len %s  body %s ", len, size)
+//        System.out.printf("len %s  body %s ", len, size)
         buffer.putInt(len)
         buffer.putInt(size)
         buffer.put(body)

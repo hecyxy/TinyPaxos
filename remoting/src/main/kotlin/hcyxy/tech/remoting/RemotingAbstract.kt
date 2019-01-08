@@ -6,6 +6,7 @@ import hcyxy.tech.remoting.entity.ActionType
 import hcyxy.tech.remoting.entity.Proposal
 import hcyxy.tech.remoting.entity.RemotingCode
 import hcyxy.tech.remoting.util.ProposalUtil
+import hcyxy.tech.remoting.util.setRequestId
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
@@ -32,9 +33,11 @@ abstract class RemotingAbstract {
     private val increment = AtomicLong(0)
 
     protected fun invokeSyncImpl(channel: Channel, proposal: Proposal, timeout: Long): Proposal {
+        val requestId = increment.incrementAndGet()
+        proposal.setRequestId(requestId)
         try {
-            val responseFuture = ResponseFuture(increment.incrementAndGet(), timeout, null, null)
-            this.responseTable[proposal.proposalId] = responseFuture
+            val responseFuture = ResponseFuture(requestId, timeout, null, null)
+            this.responseTable[requestId] = responseFuture
             channel.writeAndFlush(proposal).addListener { future ->
                 if (future.isSuccess) {
                     responseFuture.setSendRequestOk(true)
@@ -42,7 +45,7 @@ abstract class RemotingAbstract {
                 } else {
                     responseFuture.setSendRequestOk(false)
                 }
-                this.responseTable.remove(proposal.proposalId)
+                this.responseTable.remove(requestId)
                 responseFuture.setCause(future.cause())
                 responseFuture.putResponse(null)
             }
@@ -52,7 +55,6 @@ abstract class RemotingAbstract {
                 ProposalUtil.generateProposal(
                     proposal.eventType,
                     ActionType.RESPONSE,
-                    proposal.proposalId,
                     "sync invoke send message timeout",
                     proposal.packet,
                     RemotingCode.TIMEOUT
@@ -62,20 +64,20 @@ abstract class RemotingAbstract {
                 ProposalUtil.generateProposal(
                     proposal.eventType,
                     ActionType.RESPONSE,
-                    proposal.proposalId,
                     "send message failed",
                     proposal.packet,
                     RemotingCode.SEND_MESSAGE_FAILED
                 )
             }
         } finally {
-            this.responseTable.remove(proposal.proposalId)
+            this.responseTable.remove(requestId)
         }
     }
 
     protected fun invokeAsyncImpl(channel: Channel, proposal: Proposal, timeout: Long, callback: InvokeCallback) {
         val begin = System.currentTimeMillis()
         val acquired = this.semaphoreAsync?.tryAcquire(timeout, TimeUnit.MILLISECONDS)
+        val requestId = increment.incrementAndGet()
         if (acquired != null && acquired) {
             val cost = System.currentTimeMillis() - begin
             val once = FlexibleReleaseSemaphore(this.semaphoreAsync, 1)
@@ -83,8 +85,8 @@ abstract class RemotingAbstract {
                 once.release()
                 logger.warn("invoke async callback timeout")
             }
-            val responseFuture = ResponseFuture(increment.incrementAndGet(), timeout - cost, callback, once)
-            this.responseTable[proposal.proposalId] = responseFuture
+            val responseFuture = ResponseFuture(requestId, timeout - cost, callback, once)
+            this.responseTable[requestId] = responseFuture
             try {
                 channel.writeAndFlush(proposal).addListener { future ->
                     if (future.isSuccess) {
@@ -133,7 +135,6 @@ abstract class RemotingAbstract {
             val temp = ProposalUtil.generateProposal(
                 proposal.eventType,
                 ActionType.RESPONSE,
-                proposal.proposalId,
                 "unknown processor",
                 proposal.packet,
                 RemotingCode.UNKNOWN_PROCESSOR
@@ -145,7 +146,7 @@ abstract class RemotingAbstract {
     }
 
     private fun processResponse(ctx: ChannelHandlerContext, proposal: Proposal) {
-        val future = responseTable[proposal.proposalId]
+        val future = responseTable[proposal.requestId]
         if (future != null) {
             future.putResponse(proposal)
             future.executeCallback()

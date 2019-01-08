@@ -6,21 +6,23 @@ enum class InstanceState {
     PREPARE, ACCEPT, DONE
 }
 
-data class Packet(
-    var logId: Long?,
-    var packetType: Int,
-    var value: String?,
-    var promiseSet: Set<Long>?,
-    var acceptSet: Set<Long>?,
-    var isSucc: Boolean?,
-    var instanceState: InstanceState?,
-    var serverId: Int?
-)
+class Packet {
+    var proposalId: Long = 0
+    var logId: Long = 0
+    var packetType: Int = 0
+    var value: String? = null
+    var promiseSet: Set<Long>? = null
+    var acceptSet: Set<Long>? = null
+    var isSucc: Boolean = false
+    var instanceState: InstanceState? = null
+    var serverId: Int? = null
+}
+
 
 class Proposal {
+    var requestId: Long = 0
     var eventType: EventType = EventType.DEFAULT
     var actionType: ActionType = ActionType.REQUEST
-    var proposalId: Long = 0
     var message: String = ""
     var packet: Packet? = null
     var remotingCode: RemotingCode? = RemotingCode.NORMAL
