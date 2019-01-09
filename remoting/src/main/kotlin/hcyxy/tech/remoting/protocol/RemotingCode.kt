@@ -1,4 +1,4 @@
-package hcyxy.tech.remoting.entity
+package hcyxy.tech.remoting.protocol
 
 enum class RemotingCode(val code: Int) {
     NORMAL(200),

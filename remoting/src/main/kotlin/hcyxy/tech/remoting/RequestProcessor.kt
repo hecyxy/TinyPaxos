@@ -1,7 +1,7 @@
 package hcyxy.tech.remoting
 
-import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.protocol.RemotingMsg
 
 interface RequestProcessor {
-    fun processRequest(proposal: Proposal): Proposal
+    fun processRequest(msg: RemotingMsg): RemotingMsg
 }

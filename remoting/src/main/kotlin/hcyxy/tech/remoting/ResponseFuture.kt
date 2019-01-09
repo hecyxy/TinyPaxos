@@ -2,10 +2,9 @@ package hcyxy.tech.remoting
 
 import hcyxy.tech.remoting.common.FlexibleCountDownLatch
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
-import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.protocol.RemotingMsg
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 
 class ResponseFuture(
     val proposalId: Long,
@@ -19,7 +18,7 @@ class ResponseFuture(
     @Volatile
     private var cause: Throwable? = null
     @Volatile
-    private var proposal: Proposal? = null
+    private var msg: RemotingMsg? = null
     private val countDownLatch = FlexibleCountDownLatch(1)
 //    private val invokeCallback: InvokeCallback? = callback
     // 保证信号量至多至少只被释放一次
@@ -38,13 +37,13 @@ class ResponseFuture(
         return this.sendRequestOk
     }
 
-    fun waitResponse(timeoutMillis: Long): Proposal? {
+    fun waitResponse(timeoutMillis: Long): RemotingMsg? {
         this.countDownLatch.await(timeoutMillis, TimeUnit.MILLISECONDS)
-        return this.proposal
+        return this.msg
     }
 
-    fun putResponse(proposal: Proposal?) {
-        this.proposal = proposal
+    fun putResponse(msg: RemotingMsg?) {
+        this.msg = msg
     }
 
     fun executeCallback() {

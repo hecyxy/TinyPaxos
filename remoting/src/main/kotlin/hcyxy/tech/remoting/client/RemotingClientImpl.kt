@@ -5,7 +5,7 @@ import hcyxy.tech.remoting.RemotingAbstract
 import hcyxy.tech.remoting.common.ChannelWrapper
 import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.config.ClientConfig
-import hcyxy.tech.remoting.entity.Proposal
+import hcyxy.tech.remoting.protocol.RemotingMsg
 import hcyxy.tech.remoting.exception.RemotingConnectException
 import hcyxy.tech.remoting.server.MsgDecoder
 import hcyxy.tech.remoting.server.MsgEncoder
@@ -74,11 +74,11 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
         this.channelTable.clear()
     }
 
-    override fun invokeSync(addr: String, proposal: Proposal, timeout: Long): Proposal {
+    override fun invokeSync(addr: String, msg: RemotingMsg, timeout: Long): RemotingMsg {
         val channel = getOrCreateChanne(addr)
         if (channel != null && channel.isActive) {
             try {
-                return invokeSyncImpl(channel, proposal, timeout)
+                return invokeSyncImpl(channel, msg, timeout)
             } catch (e: Exception) {
                 logger.error("invoke sync,exception", e)
                 throw RemotingConnectException(addr, e)
@@ -89,11 +89,11 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
         }
     }
 
-    override fun invokeAsync(addr: String, proposal: Proposal, timeout: Long, callBack: InvokeCallback) {
+    override fun invokeAsync(addr: String, msg: RemotingMsg, timeout: Long, callBack: InvokeCallback) {
         val channel = getOrCreateChanne(addr)
         if (channel != null && channel.isActive) {
             try {
-                this.invokeAsyncImpl(channel, proposal, timeout, callBack)
+                this.invokeAsyncImpl(channel, msg, timeout, callBack)
             } catch (e: Exception) {
                 logger.error("invoke async exception", e)
             }
@@ -260,18 +260,17 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
             if (event is IdleStateEvent) {
                 if (event.state() == IdleState.ALL_IDLE) {
                     val remoteAddress = RemotingHelper.channel2Addr(ctx.channel())
-                    logger.warn("netty server idle exception [{}]", remoteAddress)
-                    RemotingHelper.closeChannel(ctx.channel())
+                    logger.warn("netty client idle [{}]", remoteAddress)
+                    closeChannel(ctx.channel())
                 }
             }
-
             ctx.fireUserEventTriggered(event)
         }
     }
 
-    internal inner class ClientHandler : SimpleChannelInboundHandler<Proposal>() {
+    internal inner class ClientHandler : SimpleChannelInboundHandler<RemotingMsg>() {
         private val logger = LoggerFactory.getLogger(javaClass)
-        override fun channelRead0(ctx: ChannelHandlerContext, msg: Proposal) {
+        override fun channelRead0(ctx: ChannelHandlerContext, msg: RemotingMsg) {
             logger.info("read message")
             processReceiveMessage(ctx, msg)
         }

@@ -2,17 +2,13 @@ package hcyxy.tech.remoting
 
 import hcyxy.tech.remoting.common.FlexibleReleaseSemaphore
 import hcyxy.tech.remoting.common.RemotingHelper
-import hcyxy.tech.remoting.entity.ActionType
-import hcyxy.tech.remoting.entity.Proposal
-import hcyxy.tech.remoting.entity.RemotingCode
-import hcyxy.tech.remoting.util.ProposalUtil
-import hcyxy.tech.remoting.util.setRequestId
+import hcyxy.tech.remoting.protocol.ActionCode
+import hcyxy.tech.remoting.protocol.RemotingMsg
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * @Description server和client的公共抽象方法
@@ -30,54 +26,41 @@ abstract class RemotingAbstract {
     )
     //允许异步请求
 //    this.semaphoreAsync = Semaphore(permitAsync, true)
-    private val increment = AtomicLong(0)
 
-    protected fun invokeSyncImpl(channel: Channel, proposal: Proposal, timeout: Long): Proposal {
-        val requestId = increment.incrementAndGet()
-        proposal.setRequestId(requestId)
+    protected fun invokeSyncImpl(channel: Channel, msg: RemotingMsg, timeout: Long): RemotingMsg {
+        val requestId = msg.getRequestId()
+        println("requestId $requestId")
         try {
             val responseFuture = ResponseFuture(requestId, timeout, null, null)
             this.responseTable[requestId] = responseFuture
-            channel.writeAndFlush(proposal).addListener { future ->
+            channel.writeAndFlush(msg).addListener { future ->
                 if (future.isSuccess) {
                     responseFuture.setSendRequestOk(true)
                     return@addListener
                 } else {
                     responseFuture.setSendRequestOk(false)
                 }
-                this.responseTable.remove(requestId)
+                this.responseTable.remove(msg.getRequestId())
                 responseFuture.setCause(future.cause())
                 responseFuture.putResponse(null)
             }
             return responseFuture.waitResponse(timeout) ?: if (responseFuture.isSendRequestOk()) {
                 channel.close()
                 logger.warn("send message timeout")
-                ProposalUtil.generateProposal(
-                    proposal.eventType,
-                    ActionType.RESPONSE,
-                    "sync invoke send message timeout",
-                    proposal.packet,
-                    RemotingCode.TIMEOUT
-                )
+                RemotingMsg()
             } else {
                 logger.warn("send message failed")
-                ProposalUtil.generateProposal(
-                    proposal.eventType,
-                    ActionType.RESPONSE,
-                    "send message failed",
-                    proposal.packet,
-                    RemotingCode.SEND_MESSAGE_FAILED
-                )
+                RemotingMsg()
             }
         } finally {
             this.responseTable.remove(requestId)
         }
     }
 
-    protected fun invokeAsyncImpl(channel: Channel, proposal: Proposal, timeout: Long, callback: InvokeCallback) {
+    protected fun invokeAsyncImpl(channel: Channel, msg: RemotingMsg, timeout: Long, callback: InvokeCallback) {
         val begin = System.currentTimeMillis()
         val acquired = this.semaphoreAsync?.tryAcquire(timeout, TimeUnit.MILLISECONDS)
-        val requestId = increment.incrementAndGet()
+        val requestId = msg.getRequestId()
         if (acquired != null && acquired) {
             val cost = System.currentTimeMillis() - begin
             val once = FlexibleReleaseSemaphore(this.semaphoreAsync, 1)
@@ -88,7 +71,7 @@ abstract class RemotingAbstract {
             val responseFuture = ResponseFuture(requestId, timeout - cost, callback, once)
             this.responseTable[requestId] = responseFuture
             try {
-                channel.writeAndFlush(proposal).addListener { future ->
+                channel.writeAndFlush(msg).addListener { future ->
                     if (future.isSuccess) {
                         responseFuture.setSendRequestOk(true)
                         return@addListener
@@ -117,39 +100,39 @@ abstract class RemotingAbstract {
         }
     }
 
-    fun processReceiveMessage(ctx: ChannelHandlerContext, proposal: Proposal) {
-        when (proposal.actionType) {
-            ActionType.REQUEST -> {
-                processRequest(ctx, proposal)
+    fun processReceiveMessage(ctx: ChannelHandlerContext, msg: RemotingMsg) {
+        when (msg.getActionCode()) {
+            ActionCode.REQUEST.code -> {
+                processRequest(ctx, msg)
             }
-            ActionType.RESPONSE -> {
-                processResponse(ctx, proposal)
+            ActionCode.RESPONSE.code -> {
+                processResponse(ctx, msg)
             }
         }
     }
 
-    private fun processRequest(ctx: ChannelHandlerContext, proposal: Proposal) {
-        val processor = this.processorTable[proposal.eventType.index]
-        val result = processor?.first?.processRequest(proposal)
+    private fun processRequest(ctx: ChannelHandlerContext, msg: RemotingMsg) {
+        val processor = this.processorTable[msg.getProcessorCode()]
+        val result = processor?.first?.processRequest(msg)
+        val requestId = msg.getRequestId()
         if (result == null) {
-            val temp = ProposalUtil.generateProposal(
-                proposal.eventType,
-                ActionType.RESPONSE,
-                "unknown processor",
-                proposal.packet,
-                RemotingCode.UNKNOWN_PROCESSOR
-            )
-            ctx.writeAndFlush(temp)
+            val meta = RemotingMsg()
+            meta.setRequestId(requestId)
+            meta.setActionCode(ActionCode.RESPONSE.code)
+            meta.setMessage(msg.getMessage())
+            ctx.writeAndFlush(meta)
         } else {
             ctx.writeAndFlush(result)
         }
     }
 
-    private fun processResponse(ctx: ChannelHandlerContext, proposal: Proposal) {
-        val future = responseTable[proposal.requestId]
+    private fun processResponse(ctx: ChannelHandlerContext, msg: RemotingMsg) {
+        val requestId = msg.getRequestId()
+        val future = responseTable[requestId]
         if (future != null) {
-            future.putResponse(proposal)
+            future.putResponse(msg)
             future.executeCallback()
+            this.responseTable.remove(requestId)
         } else {
             logger.warn("have received response, but do not find any request, address: ${RemotingHelper.channel2Addr(ctx.channel())}")
         }

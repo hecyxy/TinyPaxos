@@ -1,5 +1,5 @@
-package hcyxy.tech.remoting.entity
+package hcyxy.tech.remoting.protocol
 
-enum class EventType(val index: Int) {
+enum class ProcessorCode(val code: Int) {
     DEFAULT(1000), PROPOSER(1001), ACCEPTOR(1002), LEARNER(1003), LEADER(1004)
 }

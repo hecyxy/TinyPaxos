@@ -1,14 +1,11 @@
 package hcyxy.tech.core.processor
 
-import hcyxy.tech.core.constants.AcceptorEventType
 import hcyxy.tech.core.constants.PaxosConfig
-import hcyxy.tech.core.constants.ProposerEventType
+import hcyxy.tech.core.entity.Packet
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
-import hcyxy.tech.remoting.entity.*
-import hcyxy.tech.remoting.util.ProposalUtil
+import hcyxy.tech.remoting.protocol.RemotingMsg
 import java.util.concurrent.ArrayBlockingQueue
-import kotlin.math.max
 
 class ProposerProcessor(
     private val serverId: Int,
@@ -37,90 +34,92 @@ class ProposerProcessor(
 
     }
 
-    override fun processRequest(proposal: Proposal): Proposal {
-        val packet = proposal.packet ?: return proposal
-        return when (packet.packetType) {
-            ProposerEventType.Submit.index -> {
-                toSubmitArray.put(packet)
-                sendPrepare()
-                proposal
-            }
-            ProposerEventType.PrepareResponse.index -> {
-                proposal
-            }
-            ProposerEventType.AcceptResponse.index -> {
-                proposal
-            }
-            else -> {
-                proposal
-            }
-        }
+    override fun processRequest(msg: RemotingMsg): RemotingMsg {
+//        val packet = proposal.packet ?: return proposal
+//        return when (packet.packetType) {
+//            ProposerEventType.Submit.code -> {
+//                toSubmitArray.put(packet)
+//                sendPrepare()
+//                proposal
+//            }
+//            ProposerEventType.PrepareResponse.code -> {
+//                proposal
+//            }
+//            ProposerEventType.AcceptResponse.code -> {
+//                proposal
+//            }
+//            else -> {
+//                proposal
+//            }
+//        }
+        return RemotingMsg()
     }
 
     /**
      * @Description 发送prepare
      */
     private fun sendPrepare() {
-        renewMaxProposalId()
-        val maxLogId = getMaxLogId()
-        println("maxId: $maxLogId")
-        val packet = ProposalUtil.generatePacket(
-            null,
-            maxLogId,
-            AcceptorEventType.Prepare.index,
-            null,
-            HashSet(),
-            HashSet(),
-            false,
-            InstanceState.PREPARE,
-            serverId
-        )
-        val proposal =
-            ProposalUtil.generateProposal(
-                EventType.ACCEPTOR,
-                ActionType.REQUEST,
-                null,
-                packet,
-                null
-            )
-        serverList.forEach {
-            if (it.id != serverId) {
-                val result = client.invokeSync("${it.host}:${it.port}", proposal, 2000)
-            }
-        }
+//        renewMaxProposalId()
+//        val maxLogId = getMaxLogId()
+//        println("maxId: $maxLogId")
+//        val packet = ProposalUtil.generatePacket(
+//            null,
+//            maxLogId,
+//            AcceptorEventType.Prepare.code,
+//            null,
+//            HashSet(),
+//            HashSet(),
+//            false,
+//            InstanceState.PREPARE,
+//            serverId
+//        )
+//        val proposal =
+//            ProposalUtil.generateProposal(
+//                EventType.ACCEPTOR,
+//                ActionType.REQUEST,
+//                null,
+//                packet,
+//                null
+//            )
+//        serverList.forEach {
+//            if (it.id != serverId) {
+//                val result = client.invokeSync("${it.host}:${it.port}", proposal, 2000)
+//            }
+//        }
     }
 
     /**
      * @Description get max logId
      */
     private fun getMaxLogId(): Long {
-        val logIdList = mutableListOf<Long>()
-        val packet = ProposalUtil.generatePacket(
-            null,
-            null,
-            AcceptorEventType.MAX_LOG.index,
-            null,
-            HashSet(),
-            HashSet(),
-            false,
-            InstanceState.PREPARE,
-            serverId
-        )
-        val proposal =
-            ProposalUtil.generateProposal(
-                EventType.ACCEPTOR,
-                ActionType.REQUEST,
-                null,
-                packet,
-                null
-            )
-        serverList.forEach {
-            if (it.id != serverId) {
-                client.invokeSync("${it.host}:${it.port}", proposal, 3000).packet?.let { packet ->
-                    logIdList.add(packet.logId)
-                }
-            }
-        }
-        return max(logIdList.max() ?: 0, acceptor.getMaxLogId()) + 1
+//        val logIdList = mutableListOf<Long>()
+//        val packet = ProposalUtil.generatePacket(
+//            null,
+//            null,
+//            AcceptorEventType.MAX_LOG.code,
+//            null,
+//            HashSet(),
+//            HashSet(),
+//            false,
+//            InstanceState.PREPARE,
+//            serverId
+//        )
+//        val proposal =
+//            ProposalUtil.generateProposal(
+//                EventType.ACCEPTOR,
+//                ActionType.REQUEST,
+//                null,
+//                packet,
+//                null
+//            )
+//        serverList.forEach {
+//            if (it.id != serverId) {
+////                client.invokeSync("${it.host}:${it.port}", proposal, 3000).packet?.let { packet ->
+////                    logIdList.add(packet.logId)
+//                }
+//            }
+//        }
+//        return max(logIdList.max() ?: 0, acceptor.getMaxLogId()) + 1
+        return 20
     }
 }

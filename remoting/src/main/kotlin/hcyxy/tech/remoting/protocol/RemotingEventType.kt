@@ -1,4 +1,4 @@
-package hcyxy.tech.remoting.entity
+package hcyxy.tech.remoting.protocol
 
 enum class RemotingEventType {
     CONNECT,

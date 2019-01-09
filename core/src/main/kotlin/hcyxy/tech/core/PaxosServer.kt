@@ -11,7 +11,7 @@ import hcyxy.tech.remoting.client.RemotingClient
 import hcyxy.tech.remoting.client.RemotingClientImpl
 import hcyxy.tech.remoting.config.ClientConfig
 import hcyxy.tech.remoting.config.ServerConfig
-import hcyxy.tech.remoting.entity.EventType
+import hcyxy.tech.remoting.protocol.ProcessorCode
 import hcyxy.tech.remoting.server.RemotingServer
 import hcyxy.tech.remoting.server.RemotingServerImpl
 import org.slf4j.LoggerFactory
@@ -102,11 +102,11 @@ class PaxosServer(private val param: Array<String>) {
             val serverId = notnull(paxosConfig?.serverId, "配置信息错误")
             val serverList = notnull(paxosConfig?.server, "配置信息错误")
             val acceptorProcessor = AcceptorProcessor(serverId, serverList, client)
-            remotingServer?.registerProcessor(EventType.ACCEPTOR.index, acceptorProcessor, publicExecutor)
+            remotingServer?.registerProcessor(ProcessorCode.ACCEPTOR.code, acceptorProcessor, publicExecutor)
             val proposerProcessor = ProposerProcessor(serverId, serverList, client, acceptorProcessor)
-            remotingServer?.registerProcessor(EventType.PROPOSER.index, proposerProcessor, publicExecutor)
+            remotingServer?.registerProcessor(ProcessorCode.PROPOSER.code, proposerProcessor, publicExecutor)
             val learnerProcessor = LearnerProcessor(serverId, serverList, client)
-            remotingServer?.registerProcessor(EventType.LEARNER.index, learnerProcessor, publicExecutor)
+            remotingServer?.registerProcessor(ProcessorCode.LEARNER.code, learnerProcessor, publicExecutor)
         }
 
         fun start() {
