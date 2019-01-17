@@ -1,9 +1,14 @@
 package hcyxy.tech.core.processor
 
+import hcyxy.tech.core.constants.AcceptorEventType
+import hcyxy.tech.core.constants.DefaultEventType
 import hcyxy.tech.core.constants.PaxosConfig
-import hcyxy.tech.core.entity.Packet
+import hcyxy.tech.core.constants.ProposerEventType
+import hcyxy.tech.core.info.protocol.MaxLogIdInfo
+import hcyxy.tech.core.info.Packet
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
+import hcyxy.tech.remoting.protocol.ProcessorCode
 import hcyxy.tech.remoting.protocol.RemotingMsg
 import java.util.*
 
@@ -11,48 +16,33 @@ class AcceptorProcessor(
     private val serverId: Int,
     private val serverList: List<PaxosConfig.ServerNode>,
     private val client: RemotingClient
-) : RequestProcessor {
+) : RequestProcessor, AbstractProcessor() {
     //include every request
     private val packetMap = HashMap<Long, Packet>()
     //alread accept value
     private val acceptValue = HashMap<Long, String>()
 
     override fun processRequest(msg: RemotingMsg): RemotingMsg {
-//        val packet = proposal.packet
-//        val packetType = packet?.packetType ?: return proposal
-//        return when (packetType) {
-//            AcceptorEventType.Prepare.code -> {
-//                prepare(packet)
-//                proposal
-//            }
-//            AcceptorEventType.Accept.code -> {
-//                proposal
-//            }
-//            AcceptorEventType.MAX_LOG.code -> {
-//                val meta = ProposalUtil.generatePacket(
-//                    null,
-//                    getMaxLogId(),
-//                    EventType.PROPOSER.code,
-//                    null,
-//                    null,
-//                    null,
-//                    null,
-//                    null,
-//                    null
-//                )
-//                ProposalUtil.generateProposal(EventType.PROPOSER, ActionType.RESPONSE, null, null, null)
-//            }
-//            else -> {
-//                ProposalUtil.generateProposal(
-//                    EventType.DEFAULT,
-//                    ActionType.RESPONSE,
-//                    "unknown packet",
-//                    null,
-//                    RemotingCode.UNKNOWN_PACKET
-//                )
-//            }
-//        }
-        return RemotingMsg()
+        return when (msg.getProcessorEventType()) {
+            AcceptorEventType.Prepare.index -> {
+                RemotingMsg()
+            }
+            AcceptorEventType.Accept.index -> {
+                RemotingMsg()
+            }
+            AcceptorEventType.MAX_LOG.index -> {
+                val maxLogId = getMaxLogId()
+                val body = MaxLogIdInfo()
+                body.setLogId(maxLogId)
+                RemotingMsg.createResponse(
+                    "max log id",
+                    body.getByteArray()
+                )
+            }
+            else -> {
+                createErrorResponse("unknown processor event type")
+            }
+        }
     }
 
     private fun prepare(packet: Packet) {

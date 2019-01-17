@@ -10,7 +10,6 @@ class RemotingMsg {
         fun decode(buffer: ByteBuffer): RemotingMsg {
             val length = buffer.int//buffer.limit()
             val headerLength = buffer.int
-            println("length $length $headerLength")
             val headerData = ByteArray(headerLength)
             buffer.get(headerData)
             val bodyLength = length - 4 - headerLength
@@ -23,6 +22,34 @@ class RemotingMsg {
             msg.body = bodyData
             return msg
         }
+
+        fun createResponse(
+            message: String?,
+            body: ByteArray?
+        ): RemotingMsg {
+            val msg = RemotingMsg()
+            msg.setActionCode(ActionCode.RESPONSE.code)
+            message?.let { msg.setMessage(it) }
+            msg.setRemotingCode(RemotingCode.NORMAL.code)
+            body?.let { msg.setBody(body) }
+            return msg
+        }
+
+        fun createRequest(
+            processorCode: Int,
+            message: String?,
+            processorEventType: Int,
+            body: ByteArray?
+        ): RemotingMsg {
+            val msg = RemotingMsg()
+            msg.setActionCode(ActionCode.REQUEST.code)
+            msg.setProcessorCode(processorCode)
+            message?.let { msg.setMessage(it) }
+            msg.setRemotingCode(RemotingCode.NORMAL.code)
+            msg.setProcessorEventType(processorEventType)
+            body?.let { msg.setBody(body) }
+            return msg
+        }
     }
 
     /**
@@ -31,10 +58,13 @@ class RemotingMsg {
     private var requestId = increment.incrementAndGet()
     //request code request or response
     private var actionCode: Int = ActionCode.REQUEST.code
+    //processor
     private var processorCode: Int = 0
     //remoting description
     private var message: String = ""
     private var remotingCode: Int = 0
+    //processor event type
+    private var processorEventType: Int = 0
     @Transient
     private var header: ByteArray? = null
     /**
@@ -49,7 +79,6 @@ class RemotingMsg {
         var len = 4
         val headerSize = header?.size ?: 0
         val bodySize = body?.size ?: 0
-        println("headerSize $headerSize  body $bodySize")
         len += headerSize + bodySize
         val buffer = ByteBuffer.allocate(4 + len)
         buffer.putInt(len)
@@ -107,6 +136,14 @@ class RemotingMsg {
 
     fun getMessage(): String {
         return this.message
+    }
+
+    fun getProcessorEventType(): Int {
+        return this.processorEventType
+    }
+
+    fun setProcessorEventType(eventType: Int) {
+        this.processorEventType = eventType
     }
 
     fun setRemotingCode(remotingCode: Int) {

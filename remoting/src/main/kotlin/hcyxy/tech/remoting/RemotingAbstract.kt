@@ -29,7 +29,6 @@ abstract class RemotingAbstract {
 
     protected fun invokeSyncImpl(channel: Channel, msg: RemotingMsg, timeout: Long): RemotingMsg {
         val requestId = msg.getRequestId()
-        println("requestId $requestId")
         try {
             val responseFuture = ResponseFuture(requestId, timeout, null, null)
             this.responseTable[requestId] = responseFuture

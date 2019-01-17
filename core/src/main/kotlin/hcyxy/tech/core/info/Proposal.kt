@@ -1,4 +1,4 @@
-package hcyxy.tech.core.entity
+package hcyxy.tech.core.info
 
 //事件类型 请求/回复  proposalId packet
 //data class Proposal(var eventType: EventType, var actionType: ActionType, var proposalId: Long, var packet: Packet?)
