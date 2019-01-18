@@ -6,14 +6,14 @@ abstract class AbstractProcessor {
     /**
      * @Description create error response
      */
-    fun createErrorResponse(message: String): RemotingMsg {
-        return RemotingMsg.createResponse(message, null)
+    fun createErrorResponse(requestId: Long, message: String): RemotingMsg {
+        return RemotingMsg.createResponse(requestId, message, null)
     }
 
     /**
      * @Description create successful response
      */
-    fun createOkResponse(message: String): RemotingMsg {
-        return RemotingMsg.createResponse(message, null)
+    fun createOkResponse(requestId: Long, message: String): RemotingMsg {
+        return RemotingMsg.createResponse(requestId, message, null)
     }
 }

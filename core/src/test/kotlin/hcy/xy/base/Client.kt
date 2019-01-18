@@ -13,7 +13,9 @@ fun main(vararg args: String) {
     client.start()
     val value =SubmitValue("heihei")
     val body = RemotingMsgSerializable.encode(value)
+    val begin = System.currentTimeMillis()
     val msg = RemotingMsg.createRequest(ProcessorCode.PROPOSER.code, "aaa", ProposerEventType.Submit.index, body)
     val result = client.invokeSync("127.0.0.1:8088", msg, 10000)
+    println(System.currentTimeMillis() - begin)
     println(result)
 }

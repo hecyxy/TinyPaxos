@@ -9,6 +9,7 @@ import hcyxy.tech.core.info.protocol.MaxLogIdInfo
 import hcyxy.tech.core.util.InfoUtil
 import hcyxy.tech.remoting.RequestProcessor
 import hcyxy.tech.remoting.client.RemotingClient
+import hcyxy.tech.remoting.protocol.ActionCode
 import hcyxy.tech.remoting.protocol.ProcessorCode
 import hcyxy.tech.remoting.protocol.RemotingMsg
 import org.slf4j.LoggerFactory
@@ -25,7 +26,7 @@ class ProposerProcessor(
     private val toSubmitArray = ArrayBlockingQueue<SubmitValue>(1)
     //成功提交
     // 成功提交的状态
-    private val alreadySubmitArray = ArrayBlockingQueue<Packet>(1)
+    private val alreadySubmitArray = ArrayBlockingQueue<SubmitValue>(1)
     /**
      * @Description 执行prepare流程
      */
@@ -50,7 +51,7 @@ class ProposerProcessor(
                 val submitValue = SubmitValue(value.content)
                 toSubmitArray.put(submitValue)
                 sendPrepare()
-                createOkResponse("send message ok")
+                createOkResponse(msg.getRequestId(), "success")
             }
             ProposerEventType.PrepareResponse.index -> {
                 RemotingMsg()
@@ -59,7 +60,7 @@ class ProposerProcessor(
                 RemotingMsg()
             }
             else -> {
-                createErrorResponse("unknown processor event type")
+                createErrorResponse(msg.getRequestId(), "unknown processor event type")
             }
         }
     }
@@ -71,12 +72,12 @@ class ProposerProcessor(
         val maxLogId = getMaxLogId()
         logger.info("get maxLogId $maxLogId")
         renewMaxProposalId()
-        val prepareRequest = createPrepareRequest()
-        serverList.forEach {
-            if (it.id != serverId) {
-                val result = client.invokeSync("${it.host}:${it.port}", prepareRequest, 2000)
-            }
-        }
+//        val prepareRequest = createPrepareRequest()
+//        serverList.forEach {
+//            if (it.id != serverId) {
+//                val result = client.invokeSync("${it.host}:${it.port}", prepareRequest, 2000)
+//            }
+//        }
     }
 
     /**

@@ -24,10 +24,12 @@ class RemotingMsg {
         }
 
         fun createResponse(
+            requestId: Long,
             message: String?,
             body: ByteArray?
         ): RemotingMsg {
             val msg = RemotingMsg()
+            msg.setRequestId(requestId)
             msg.setActionCode(ActionCode.RESPONSE.code)
             message?.let { msg.setMessage(it) }
             msg.setRemotingCode(RemotingCode.NORMAL.code)
