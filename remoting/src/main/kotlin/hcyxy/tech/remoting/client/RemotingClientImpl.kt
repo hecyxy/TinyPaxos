@@ -26,7 +26,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
-class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), RemotingClient {
+class RemotingClientImpl(clientConfig: ClientConfig) :
+    RemotingAbstract(clientConfig.permitAsync, clientConfig.permitOnce),
+    RemotingClient {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     private val boot = Bootstrap()
@@ -103,6 +105,21 @@ class RemotingClientImpl(clientConfig: ClientConfig) : RemotingAbstract(), Remot
         }
     }
 
+    override fun invokeOnce(addr: String, msg: RemotingMsg, timeout: Long) {
+        val channel = getOrCreateChanne(addr)
+        if (channel != null && channel.isActive) {
+            try {
+                this.invokeOnceImpl(channel, msg, timeout)
+            } catch (e: Exception) {
+                logger.warn("send request exception", e)
+                closeChannel(channel)
+                throw e
+            }
+        } else {
+            closeChannel(addr, channel)
+            throw Exception("create channel exception for addr $addr")
+        }
+    }
 
     private fun getOrCreateChanne(addr: String): Channel? {
         val channelWrapper = this.channelTable[addr]

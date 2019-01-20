@@ -21,7 +21,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 
-class RemotingServerImpl(serverConfig: ServerConfig) : RemotingAbstract(), RemotingServer {
+class RemotingServerImpl(serverConfig: ServerConfig) :
+    RemotingAbstract(serverConfig.permitAsync, serverConfig.permitOnce), RemotingServer {
 
     private val logger = LoggerFactory.getLogger(RemotingServerImpl::class.java)
     private val server: ServerBootstrap = ServerBootstrap()

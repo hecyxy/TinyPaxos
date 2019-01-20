@@ -9,9 +9,14 @@ class TestArray {
         // 成功提交的状态
         val array = ArrayBlockingQueue<Int>(1)
         array.put(20)
-        array.put(30)
-        array.put(40)
-        println(array.size)
         println(array.peek())
+        println(array.peek())
+
+        println(array.peek())
+    }
+
+    @Test
+    fun testMax(){
+        println(maxOf(3,4,12))
     }
 }

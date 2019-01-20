@@ -7,5 +7,7 @@ class ClientConfig {
     //channel最长等待时间
     var channelWait = 2000L
     //允许的异步连接数
-    var permitAsync = 1000
+    var permitAsync = 2000
+    //允许同步连接数
+    var permitOnce = 2000
 }

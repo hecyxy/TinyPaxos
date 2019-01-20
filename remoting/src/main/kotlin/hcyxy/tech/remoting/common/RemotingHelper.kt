@@ -30,4 +30,8 @@ object RemotingHelper {
             logger.info("close the channel. address:{}, result:{}", remoteAddr, future.isSuccess)
         }
     }
+
+    fun getAddress(host: String?, port: Int?): String {
+        return "$host:$port"
+    }
 }
