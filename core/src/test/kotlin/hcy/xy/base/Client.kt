@@ -1,8 +1,11 @@
 package hcy.xy.base
 
+import hcyxy.tech.core.constants.LearnerEventType
 import hcyxy.tech.core.constants.ProposerEventType
 import hcyxy.tech.core.info.SubmitValue
 import hcyxy.tech.core.info.protocol.AcceptProposal
+import hcyxy.tech.core.info.protocol.LearnRequest
+import hcyxy.tech.core.info.protocol.LearnResponse
 import hcyxy.tech.core.util.getByteArray
 import hcyxy.tech.core.util.getObject
 import hcyxy.tech.remoting.client.RemotingClientImpl
@@ -28,4 +31,10 @@ fun main(vararg args: String) {
     val msg1 = RemotingMsg.createRequest(ProcessorCode.PROPOSER.code, "aaa", ProposerEventType.Submit.index, body2)
     val result2 = client.invokeSync("127.0.0.1:8088", msg1, 10000)
     result2.getBody()?.let { println(getObject(AcceptProposal::class.java, it)) }
+
+    val request = LearnRequest(2)
+    val body3 = request.getByteArray()
+    val msg3 = RemotingMsg.createRequest(ProcessorCode.LEARNER.code, "aaa", LearnerEventType.LearnRequest.index, body3)
+    val result3 = client.invokeSync("127.0.0.1:8089", msg3, 10000)
+    result3.getBody()?.let { println(getObject(LearnResponse::class.java, it)) }
 }

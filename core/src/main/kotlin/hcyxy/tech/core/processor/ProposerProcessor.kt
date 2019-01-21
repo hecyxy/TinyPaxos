@@ -44,7 +44,7 @@ class ProposerProcessor(
     override fun processRequest(msg: RemotingMsg): RemotingMsg {
         return when (msg.getProcessorEventType()) {
             ProposerEventType.Submit.index -> {
-                val remotingBody = msg.getBody() ?: return RemotingMsg()
+                val remotingBody = msg.getBody() ?: return createErrorResponse(msg.getRequestId(), "empty request body")
                 val value = InfoUtil.byte2SubmitValue(remotingBody) ?: return RemotingMsg()
                 val submitValue = SubmitValue(value.content)
                 toSubmitArray.put(submitValue)
@@ -104,7 +104,7 @@ class ProposerProcessor(
         }
         val acceptList = receiveList.filter { it.accept }
         return if ((acceptList.size + 1) > serverList.size / 2) {
-            val valueList = acceptList.filter { it.content != null }.sortedBy { it.proposalId }
+            val valueList = acceptList.filter { it.content != null }.sortedByDescending { it.proposalId }
             if (valueList.isNotEmpty()) {
                 //send accept request with response value which has max proposalId
                 executeProcess()

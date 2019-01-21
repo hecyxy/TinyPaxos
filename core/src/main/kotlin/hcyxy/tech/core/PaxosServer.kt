@@ -105,7 +105,7 @@ class PaxosServer(private val param: Array<String>) {
             remotingServer?.registerProcessor(ProcessorCode.ACCEPTOR.code, acceptorProcessor, publicExecutor)
             val proposerProcessor = ProposerProcessor(serverId, serverList, client, acceptorProcessor)
             remotingServer?.registerProcessor(ProcessorCode.PROPOSER.code, proposerProcessor, publicExecutor)
-            val learnerProcessor = LearnerProcessor(serverId, serverList, client)
+            val learnerProcessor = LearnerProcessor(serverId, serverList, client, acceptorProcessor)
             remotingServer?.registerProcessor(ProcessorCode.LEARNER.code, learnerProcessor, publicExecutor)
         }
 

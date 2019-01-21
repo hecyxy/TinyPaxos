@@ -5,8 +5,6 @@ import hcyxy.tech.remoting.common.RemotingHelper
 import hcyxy.tech.remoting.protocol.ActionCode
 import hcyxy.tech.remoting.protocol.RemotingMsg
 import io.netty.channel.Channel
-import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -55,10 +53,10 @@ abstract class RemotingAbstract//允许异步请求
             return responseFuture.waitResponse(timeout) ?: if (responseFuture.isSendRequestOk()) {
                 channel.close()
                 logger.warn("send message timeout")
-                RemotingMsg()
+                RemotingMsg.createResponse(requestId, "send message timeout", null)
             } else {
-                logger.warn("send message failed")
-                RemotingMsg()
+                logger.warn("write message failed")
+                RemotingMsg.createResponse(requestId, "write message failed", null)
             }
         } finally {
             this.responseTable.remove(requestId)
