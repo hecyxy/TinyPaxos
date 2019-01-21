@@ -1,10 +1,16 @@
 #### TinyPaxos
-this is a simple implement of paxos,just to enforce personal understanding about it.Here is the first version,which is a implement of basic paxos.
-And in order to understand it better,the remoting between servers completely uses sync,so it is very ineffective.
-In later version,this will be optimized step by step.
+This is a very simple implementation of paxos,just to enforce personal understanding about it.
 
 #### remoting
-this module encapsulates remoting between server and client using netty.
+This module encapsulates remoting between server and client using netty.
+
+#### core
+This module includes the prepare/accept/learn implementation about paxos.
+
+#### version
+| branch | remark |
+|---|---|
+|1.0.0| implementation of basic paxos using sync |
 
 #### start up
 ##### server/client config
@@ -90,6 +96,7 @@ fun main(vararg args: String) {
 #### Reference resources
 [paxos小结](https://hcyxy.tech/2018/11/28/paxos%E5%AD%A6%E4%B9%A0%E5%B0%8F%E7%BB%93/)<br/>
 [使用Basic-Paxos协议的日志同步与恢复](http://oceanbase.org.cn/?p=90)
+[使用Multi-Paxos协议的日志同步与恢复](http://oceanbase.org.cn/?p=111)
 
 
 
