@@ -16,5 +16,11 @@
       "port": 8090
     }
   ],
-  "serverId": 1
+  "serverId": 1,
+  "bossThreads": 1,
+  "workerThreads": 8,
+  "maxConnection": 10000,
+  "publicThreadNum": 6,
+  "permitAsync": 2000,
+  "permitOnce": 2000
 }

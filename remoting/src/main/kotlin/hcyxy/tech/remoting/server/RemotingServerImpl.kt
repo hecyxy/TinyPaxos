@@ -38,7 +38,7 @@ class RemotingServerImpl(serverConfig: ServerConfig) :
     init {
         port = serverConfig.port
         bossThreads = serverConfig.bossThreads
-        workerThreads = serverConfig.workderThreads
+        workerThreads = serverConfig.workerThreads
         this.publicExecutor = Executors.newFixedThreadPool(serverConfig.publicThreadNum, object : ThreadFactory {
             private val threadIndex = AtomicInteger(0)
             override fun newThread(r: Runnable): Thread {
